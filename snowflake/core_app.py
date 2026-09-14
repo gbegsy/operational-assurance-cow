@@ -263,7 +263,16 @@ elif page=="Toolbox Talk / Permit / POP":
     banner("SELF VERIFICATION - LEVEL 4 MONITORING","Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures")
     c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today()); activity=c4.radio("TYPE",["New WCC","Routine","POP"],index=None)
     c1,c2,c3=st.columns(3); auditor=c1.text_input("AUDITOR:"); sc=c2.text_input("SITE CONTROLLER:"); ref=c3.text_input("WCC / POP No:"); desc=st.text_input("DESCRIPTION:"); meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"site_controller":sc,"reference":ref,"description":desc,"activity_type":activity}
-    purpose("Self-verify day-to-day Toolbox Talk, permit and operating-procedure compliance, workforce understanding and implementation of Control of Work requirements."); st.markdown('<div class="blackbar">QUESTION · SITE VISIT REQUIRED · SEQUENTIAL REVIEW</div>',unsafe_allow_html=True); rs=questions("tbt12",DATA["tbt"][:2]); st.markdown('<div class="blackbar">AUDITING A POP? MOVE TO QUESTION 8</div>',unsafe_allow_html=True); rs += questions("pop",[DATA["pop"]]) if activity=="POP" else questions("tbt37",DATA["tbt"][2:])+questions("tbt8",[DATA["pop"]])
+    purpose("Self-verify day-to-day Toolbox Talk, permit and operating-procedure compliance, workforce understanding and implementation of Control of Work requirements.")
+    if activity=="POP":
+        st.markdown('<div class="blackbar">QUESTION 8 · PROCESS OPERATING PROCEDURE REVIEW</div>',unsafe_allow_html=True)
+        rs=questions("pop",[DATA["pop"]])
+    elif activity in ("New WCC","Routine"):
+        st.markdown('<div class="blackbar">QUESTIONS 1–7 · SITE VISIT REQUIRED · SEQUENTIAL REVIEW</div>',unsafe_allow_html=True)
+        rs=questions("tbt",DATA["tbt"])
+    else:
+        st.info("Select the assessment TYPE to display the relevant questions.")
+        rs=[]
     if st.button("Submit TBT / Permit / POP Audit",type="primary",use_container_width=True):
         if not site or not auditor or not activity:st.error("Complete SITE / INSTALLATION, AUDITOR and TYPE.")
         elif any(r["response"] is None for r in rs):st.error("Every displayed question requires a response.")

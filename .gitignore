@@ -1,5 +1,0 @@
-assurance.db
-assurance_uat.db
-__pycache__/
-*.pyc
-.streamlit/secrets.toml

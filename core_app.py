@@ -257,7 +257,7 @@ def dashboard():
     with t3a:
         card("KPI 1 · Tier 3","Site Controller Permit Quality",f"{k1done}/{k1plan}" if k1plan else "—",k1s,f"Completion {k1p if k1p is not None else '—'}% · Conformance {k1c if k1c is not None else '—'}% · routine/non-routine reported separately")
     with t3b:
-        card("KPI 4 · Tier 3","Site Leadership NUI Visits",f"OOE {counts['W2W OOE']}/{w}" if mapped else "—",k4s,f"Medic/HSEA {counts['Medic HSEA']}/{w} · Field Hub OIM {counts['Field Hub OIM']}/1 per quarter · conformance {k4c if k4c is not None else '—'}%")
+        card("KPI 4 · Tier 3","Site Leadership NUI Visits",f"OOE {counts['W2W OOE']}/{w}" if mapped else f"OOE 0/{w}",k4s,f"Medic/HSEA {counts['Medic HSEA']}/{w} · Field Hub OIM {counts['Field Hub OIM']}/1 per quarter · conformance {k4c if k4c is not None else '—'}%")
     st.markdown(f'<div class="exec"><h3>Overall assurance position: {overall}</h3><div>Five-tier view combining assurance delivery, whole-permit conformance, leadership engagement and lagging incident performance.</div><div class="focus"><b>Leadership focus:</b> address Red/Amber exceptions, maintain planned assurance coverage and test repeat findings for systemic Control of Work weakness.</div></div>',unsafe_allow_html=True)
     tabs=st.tabs(["Company & Site Performance","Findings & Actions","Work as Imagined vs Work as Done","Auditor View","KPI 5 Data"])
     with tabs[0]:

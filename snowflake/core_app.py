@@ -178,8 +178,7 @@ def seed_demo():
 
 def dashboard():
     st.markdown('<div class="dash"><h1>Control of Work KPI Dashboard</h1><p>Operational assurance · performance, coverage and leadership oversight</p></div>',unsafe_allow_html=True)
-    c1,c2,c3=st.columns([1,1,2]); md=c1.date_input("Reporting month",date.today().replace(day=1)); demo=c2.toggle("Demo mode")
-    if c3.button("Load / refresh demonstration data",disabled=not demo,use_container_width=True):seed_demo(); st.rerun()
+    md=st.date_input("Reporting month",date.today().replace(day=1))
     y,m=md.year,md.month; period=md.strftime("%Y-%m"); all_a=audits(); month=[a for a in all_a if safe_date(a["audit_date"]) and safe_date(a["audit_date"]).year==y and safe_date(a["audit_date"]).month==m]
     sites=sorted({a["site"] for a in month if a["site"]}); site=st.selectbox("Site / Team",["All"]+sites)
     view=month if site=="All" else [a for a in month if a["site"]==site]

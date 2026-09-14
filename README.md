@@ -9,7 +9,7 @@ The application combines Level 4 assurance forms, structured evidence capture, S
 - Permit Quality assurance form
 - Toolbox Talk / Permit / POP assurance form with activity branching
 - Leadership Engagement checklist
-- SQLite UAT data store
+- Persistent PostgreSQL demo data store (SQLite fallback for local development)
 - Persistent KPI role mapping
 - Five Control of Work KPI cards and RAG logic
 - Company and site/group performance comparison
@@ -30,10 +30,10 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The local `assurance.db` file is created automatically when the application first runs.
+The deployed demo reads `DATABASE_URL` from Streamlit Secrets and stores every submitted audit, KPI 5 result and role mapping in PostgreSQL. If `DATABASE_URL` is not configured, the local `assurance.db` file is created automatically for local development.
 
 ## Important
 
-This repository is a development and demonstration application. The included SQLite database is suitable for local/UAT demonstration rather than a production corporate deployment. Production hosting, authentication, security, database architecture, backup and enterprise integrations should be defined by the organisation deploying the application.
+This repository is a development and demonstration application. The PostgreSQL connection provides persistent storage for demonstration and UAT. It is not a substitute for the organisation's production authentication, security architecture, backup policy or enterprise integrations. Production hosting, authentication, security, database architecture, backup and enterprise integrations should be defined by the organisation deploying the application.
 
 The KPI logic intentionally avoids inventing thresholds where the underlying assurance criteria require management judgement. Synthetic demonstration records are identifiable by the `DEMO-` prefix.

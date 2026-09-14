@@ -82,11 +82,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 SITE_GROUPS = {
-    "Dimlington": (1,1), "Cleeton": (1,1), "Ravenspurn North": (1,1),
-    "Northern NUI's": (2,1), "Bacton": (1,1), "Leman 27BC": (1,1),
-    "Southern NUI's": (2,1)
+    "Site 1": (1,1), "Site 2": (1,1), "Site 3": (1,1),
+    "Site 4": (2,1), "Site 5": (1,1), "Site 6": (1,1),
+    "Site 7": (2,1)
 }
-ASSET_GROUPS = ["RN","Cleeton","Northern Flying Team","Northern W2W","Dimlington","27B","Southern Flying Team","Southern W2W","Bacton"]
+ASSET_GROUPS = ["Site 1","Site 2","Site 3","Site 4","Site 5","Site 6","Site 7","Site 8","Site 9"]
 SITE_OPTIONS = sorted(set(ASSET_GROUPS + list(SITE_GROUPS)))
 
 

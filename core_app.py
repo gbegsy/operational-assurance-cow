@@ -255,7 +255,7 @@ def dashboard():
     st.caption("Site-level visibility of permit quality, supervision, compliance monitoring and worksite controls.")
     t3a,t3b=st.columns(2)
     with t3a:
-        card("KPI 1 · Tier 3","Site Controller Permit Assurance / Non-Compliance",f"{k1done}/{k1plan}" if k1plan else "—",k1s,f"Completion {k1p if k1p is not None else '—'}% · Conformance {k1c if k1c is not None else '—'}% · routine/non-routine reported separately")
+        card("KPI 1 · Tier 3","Site Controller Permit Assurance / Non-Compliance",f"{k1done}/{k1plan}" if k1plan else "—",k1s,f"Completion {k1p if k1p is not None else '—'}% · Conformance {k1c if k1c is not None else '—'}% · routine/non-routine reported separately · plan 64 per 4 weeks")
     with t3b:
         card("KPI 4 · Tier 3","Site Leadership NUI Visits / Engagement",f"OOE {counts['W2W OOE']}/{w}" if mapped else f"OOE 0/{w}",k4s,f"Medic/HSEA {counts['Medic HSEA']}/{w} · Field Hub OIM {counts['Field Hub OIM']}/1 per quarter · conformance {k4c if k4c is not None else '—'}%")
     st.markdown(f'<div class="exec"><h3>Overall assurance position: {overall}</h3><div>Five-tier view combining assurance delivery, whole-permit conformance, leadership engagement and lagging incident performance.</div><div class="focus"><b>Leadership focus:</b> address Red/Amber exceptions, maintain planned assurance coverage and test repeat findings for systemic Control of Work weakness.</div></div>',unsafe_allow_html=True)

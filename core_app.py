@@ -5,7 +5,7 @@ from pathlib import Path
 
 try:
     import psycopg
-except ImportError:coverage 0/9 asset groups · target 1 per week
+except ImportError:
     psycopg = None
 from datetime import date, datetime
 
@@ -247,7 +247,7 @@ def dashboard():
     st.caption("Asset and functional leadership oversight of assurance performance, asset coverage and leadership engagement.")
     t2a,t2b=st.columns(2)
     with t2a:
-        card("KPI 2 · Tier 2","Asset Superintendent Permit Assurance / Non-Compliance",f"{k2done}/{k2plan}" if k2plan else "—",k2s,f"Completion {k2p if k2p is not None else '—'}% · Conformance {k2c if k2c is not None else '—'}% · coverage {k2cov}/9 asset groups")
+        card("KPI 2 · Tier 2","Asset Superintendent Permit Assurance / Non-Compliance",f"{k2done}/{k2plan}" if k2plan else "—",k2s,f"Completion {k2p if k2p is not None else '—'}% · Whole-permit conformance {k2c if k2c is not None else '—'}% · coverage {k2cov}/9 asset groups · target 1 per week")
     with t2b:
         card("KPI 3 · Tier 2","Onshore Operations Leadership NUI Engagement",f"{k3n} engagements" if qlead else "—",k3s,f"Q{q} · {k3c if k3c is not None else '—'}% checklist conformance · minimum target 3 per quarter")
 
@@ -255,10 +255,10 @@ def dashboard():
     st.caption("Site-level visibility of permit quality, supervision, compliance monitoring and worksite controls.")
     t3a,t3b=st.columns(2)
     with t3a:
-        card("KPI 1 · Tier 3","Site Controller Permit Assurance / Non-Compliance",f"{k1done}/{k1plan}" if k1plan else "—",k1s,f"Completion {k1p if k1p is not None else '—'}% · Conformance {k1c if k1c is not None else '—'}% · routine/non-routine reported separately · plan 64 per 4 weeks")
+        card("KPI 1 · Tier 3","Site Controller Permit Assurance / Non-Compliance",f"{k1done}/{k1plan}" if k1plan else "—",k1s,f"Completion {k1p if k1p is not None else '—'}% · Whole-permit conformance {k1c if k1c is not None else '—'}% · routine/non-routine reported separately · plan 64 per 4 weeks")
     with t3b:
-        card("KPI 4 · Tier 3","Site Leadership NUI Visits / Engagement",f"OOE {counts['W2W OOE']}/{w}" if mapped else f"OOE 0/{w}",k4s,f"Medic/HSEA {counts['Medic HSEA']}/{w} · Field Hub OIM {counts['Field Hub OIM']}/1 per quarter · conformance {k4c if k4c is not None else '—'}%")
-    st.markdown(f'<div class="exec"><h3>Overall assurance position: {overall}</h3><div>Five-tier view combining assurance delivery, whole-permit conformance, leadership engagement and lagging incident performance.</div><div class="focus"><b>Leadership focus:</b> address Red/Amber exceptions, maintain planned assurance coverage and test repeat findings for systemic Control of Work weakness.</div></div>',unsafe_allow_html=True)
+        card("KPI 4 · Tier 3","Site Leadership NUI Visits / Engagement",f"OOE {counts['W2W OOE']}/{w}" if mapped else f"OOE 0/{w}",k4s,f"OOE 1 per week · Medic/HSEA {counts['Medic HSEA']}/{w} (1 per week) · Field Hub OIM {counts['Field Hub OIM']}/1 per quarter · conformance {k4c if k4c is not None else '—'}%")
+    st.markdown(f'<div class="exec"><h3>Overall assurance position: {overall}</h3><div>Three-tier framework containing five individual KPIs, covering assurance delivery, whole-permit conformance, leadership engagement and lagging incident performance.</div><div class="focus"><b>Leadership focus:</b> address Red/Amber exceptions, maintain planned assurance coverage and test repeat findings for systemic Control of Work weakness.</div></div>',unsafe_allow_html=True)
     tabs=st.tabs(["Company & Site Performance","Findings & Actions","Work as Imagined vs Work as Done","Auditor View","KPI 5 Data"])
     with tabs[0]:
         st.subheader("Site Controller assurance by group"); rows=[]
@@ -336,3 +336,4 @@ else:
     if flat:
         df=pd.DataFrame(flat); st.dataframe(df.head(100),use_container_width=True,hide_index=True); st.download_button("Download dashboard-ready CSV",df.to_csv(index=False).encode("utf-8-sig"),"Operational_Assurance_Export.csv","text/csv",use_container_width=True)
     else:st.info("Submit a test audit first.")
+

@@ -220,7 +220,7 @@ def dashboard():
     sc=[a for a in permit if assigned_role(a,pmap)=="Site Controller"]; asc=[a for a in permit if assigned_role(a,pmap)=="Asset Superintendent"]
     k1plan=(sum(a+b for a,b in SITE_GROUPS.values())*w) if site=="All" else ((sum(SITE_GROUPS.get(site,(0,0)))*w) or None); k1done=len([a for a in sc if permit_type(a)!="Unclassified"]); k1p=round(100*k1done/k1plan) if k1plan else None; k1c=audit_conf(sc); k1s=rag(k1p,k1c) if sc else "Not enough data"
     k2plan=w; k2done=len([a for a in asc if permit_type(a)!="Unclassified"]); k2p=round(100*k2done/k2plan) if k2plan else None; k2c=audit_conf(asc); k2s=rag(k2p,k2c) if asc else "Not enough data"; k2cov=len({a["site"] for a in asc if a["site"] in ASSET_GROUPS})
-    q=(m-1)//3+1; qstart=date(y,(q-1)*3+1,1); qe=(q-1)*3+3; qend=date(y,qe,calendar.monthrange(y,qe)[1]); qlead=[a for a in all_a if "Leadership Engagement" in a["form_name"] and safe_date(a["audit_date"]) and qstart<=safe_date(a["audit_date"])<=qend and (site=="All" or a["site"]==site) and assigned_role(a,lmap) in {"Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager"}]; k3n=len(qlead); k3c=audit_conf(qlead); complete=date.today()>qend
+    q=(m-1)//3+1; qstart=date(y,(q-1)*3+1,1); qe=(q-1)*3+3; qend=date(y,qe,calendar.monthrange(y,qe)[1]); qlead=[a for a in all_a if "Leadership Engagement" in a["form_name"] and safe_date(a["audit_date"]) and qstart<=safe_date(a["audit_date"])<=qend and (site=="All" or a["site"]==site) and assigned_role(a,lmap)=="Onshore Operations Leadership"]; k3n=len(qlead); k3c=audit_conf(qlead); complete=date.today()>qend
     if not qlead:k3s="Not enough data"
     elif k3c is not None and k3c<70:k3s="Red"
     elif k3n>=3 and k3c>=90 and gov["kpi3_coverage"]=="Reasonable":k3s="Green"
@@ -283,14 +283,23 @@ def dashboard():
             aa=[a for a in permit+tbt+lead if a["auditor"]==n]; rr.append({"Auditor / Leader":n,"Activities":len(aa),"Question conformance %":q_conf(aa),"Whole-audit conformance %":audit_conf(aa),"Sites / Teams":", ".join(sorted({a["site"] for a in aa if a["site"]}))})
         st.dataframe(pd.DataFrame(rr),use_container_width=True,hide_index=True) if rr else st.info("No auditor data.")
     with tabs[4]:
-        st.subheader("KPI 5 · Monthly incident summary"); a,b,c=st.columns(3); current=a.number_input("Rolling 12-month permit-controlled incidents",0,999,0); prev=b.number_input("Previous rolling 12-month incidents",0,999,0); hipo=c.number_input("HiPO events",0,999,0); a,b,c=st.columns(3); injury=a.number_input("Significant injuries (MTC+)",0,999,0); loc=b.number_input("Loss of Containment",0,999,0); major=c.number_input("Major Loss of Containment",0,999,0); a,b,c=st.columns(3); repeat=a.selectbox("Repeat event theme?",["No","Yes"]); recurring=b.selectbox("Recurring permit-control failure?",["No","Yes"]); sig=c.selectbox("Significant increase?",["No","Yes"],help="No numerical threshold is assumed; use the agreed management assessment."); comments=st.text_area("Comment / source note")
-        if st.button("Save KPI 5 result",type="primary"):
-            rid="KPI5-"+uuid.uuid4().hex[:8].upper(); con=db(); con.execute("INSERT INTO kpi5 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(rid,datetime.now().isoformat(timespec="seconds"),period,site,current,prev,hipo,injury,loc,major,repeat,recurring,sig,comments,0)); con.commit(); con.close(); st.success("KPI 5 result saved.")
+        st.subheader("KPI 5 Incident Entry"); st.caption("Permit-controlled activity incidents · rolling 12-month reporting"); a,b,c=st.columns(3); current=a.number_input("Rolling 12-month permit-controlled incidents",0,999,0); prev=b.number_input("Previous rolling 12-month incidents",0,999,0); hipo=c.number_input("HiPO events",0,999,0); a,b,c=st.columns(3); injury=a.number_input("Significant injuries (MTC+)",0,999,0); loc=b.number_input("Loss of Containment",0,999,0); major=c.number_input("Major Loss of Containment",0,999,0); a,b,c=st.columns(3); repeat=a.selectbox("Repeat event theme?",["No","Yes"]); recurring=b.selectbox("Recurring permit-control failure?",["No","Yes"]); sig=c.selectbox("Significant increase?",["No","Yes"],help="No numerical threshold is assumed; use the agreed management assessment."); comments=st.text_area("Learning / management comments")
+        if st.button("Save KPI 5 incident entry",type="primary"):
+            rid="KPI5-"+uuid.uuid4().hex[:8].upper(); con=db(); con.execute("INSERT INTO kpi5 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(rid,datetime.now().isoformat(timespec="seconds"),period,site,current,prev,hipo,injury,loc,major,repeat,recurring,sig,comments,0)); con.commit(); con.close(); st.success("KPI 5 incident entry saved.")
 
 st.sidebar.markdown("### Operational Assurance")
-page=st.sidebar.radio("Navigation",["Dashboard","Permit Quality","Toolbox Talk / Permit / POP","Leadership Engagement","Submitted Audits","Dashboard Export"],label_visibility="collapsed")
+page=st.sidebar.radio("Navigation",["Dashboard","KPI 5 Incidents","Permit Quality","Toolbox Talk / Permit / POP","Leadership Engagement","Submitted Audits","Dashboard Export"],label_visibility="collapsed")
 
 if page=="Dashboard": dashboard()
+elif page=="KPI 5 Incidents":
+    st.header("KPI 5 Incident Entry")
+    st.caption("Permit-controlled activity incidents · rolling 12-month reporting")
+    a,b,c=st.columns(3); current=a.number_input("Rolling 12-month permit-controlled incidents",0,999,0,key="k5-nav-current"); prev=b.number_input("Previous rolling 12-month incidents",0,999,0,key="k5-nav-prev"); hipo=c.number_input("HiPO events",0,999,0,key="k5-nav-hipo")
+    a,b,c=st.columns(3); injury=a.number_input("Significant injuries (MTC+)",0,999,0,key="k5-nav-injury"); loc=b.number_input("Loss of Containment",0,999,0,key="k5-nav-loc"); major=c.number_input("Major Loss of Containment",0,999,0,key="k5-nav-major")
+    a,b,c=st.columns(3); repeat=a.selectbox("Repeat event theme?",["No","Yes"],key="k5-nav-repeat"); recurring=b.selectbox("Recurring permit-control failure?",["No","Yes"],key="k5-nav-recurring"); sig=c.selectbox("Significant increase?",["No","Yes"],help="No numerical threshold is assumed; use the agreed management assessment.",key="k5-nav-sig")
+    comments=st.text_area("Learning / management comments",key="k5-nav-comments")
+    if st.button("Save KPI 5 incident entry",type="primary",key="k5-nav-save"):
+        rid="KPI5-"+uuid.uuid4().hex[:8].upper(); con=db(); con.execute("INSERT INTO kpi5 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(rid,datetime.now().isoformat(timespec="seconds"),period,site,current,prev,hipo,injury,loc,major,repeat,recurring,sig,comments,0)); con.commit(); con.close(); st.success("KPI 5 incident entry saved. Return to Dashboard to view the result.")
 elif page=="Permit Quality":
     banner("SELF VERIFICATION - LEVEL 4 MONITORING","Control of Work: Permit Quality")
     c1,c2,c3=st.columns([1.5,1.2,1.2]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today())
@@ -340,4 +349,3 @@ else:
     if flat:
         df=pd.DataFrame(flat); st.dataframe(df.head(100),use_container_width=True,hide_index=True); st.download_button("Download dashboard-ready CSV",df.to_csv(index=False).encode("utf-8-sig"),"Operational_Assurance_Export.csv","text/csv",use_container_width=True)
     else:st.info("Submit a test audit first.")
-

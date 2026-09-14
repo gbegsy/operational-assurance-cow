@@ -8,6 +8,8 @@ BASE = Path(__file__).parent
 DATA = json.loads((BASE / "questions.json").read_text(encoding="utf-8"))
 # Streamlit in Snowflake supplies an authenticated Snowpark session.
 session = st.connection("snowflake").session()
+session.sql("USE DATABASE OPERATIONAL_ASSURANCE").collect()
+session.sql("USE SCHEMA DEMO").collect()
 
 
 class SnowflakeResult:

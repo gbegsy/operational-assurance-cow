@@ -207,23 +207,26 @@ def dashboard():
     view=month if site=="All" else [a for a in month if a["site"]==site]
     permit=[a for a in view if a["form_name"]=="Control of Work: Permit Quality"]; tbt=[a for a in view if "Toolbox Talk" in a["form_name"]]; lead=[a for a in view if "Leadership Engagement" in a["form_name"]]
     pmap,tmap,lmap=role_map("permit"),role_map("tbt"),role_map("lead")
+    st.caption("KPI attribution uses the Auditor Role recorded on the form. The auditor name identifies the person; the role identifies which KPI receives the audit.")
+    def assigned_role(a, mapping): return (a.get("metadata") or {}).get("auditor_role") or mapping.get(a.get("auditor"), "Other")
     with st.expander("KPI role configuration"):
+        st.info("KPI attribution is based on this role mapping, not the auditor's name. Permit Quality audits mapped to Site Controller feed KPI 1; Permit Quality audits mapped to Asset Superintendent feed KPI 2; Leadership Engagement audits mapped to an operations leadership role feed KPI 3; Toolbox Talk / Permit / POP audits mapped to W2W OOE, Medic HSEA or Field Hub OIM feed KPI 4. Only auditors appearing in the selected month are listed here.")
         specs=[("permit",permit,["Site Controller","Asset Superintendent","Other"]),("tbt",tbt,["W2W OOE","Medic HSEA","Field Hub OIM","Other"]),("lead",lead,["Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager","Other"])]
         for kind,rows,opts in specs:
             for n in sorted({a["auditor"] for a in rows if a["auditor"]}):
                 cur=role_map(kind).get(n,"Other"); val=st.selectbox(n,opts,index=opts.index(cur) if cur in opts else len(opts)-1,key=f"r-{kind}-{n}")
                 if val!=cur:set_role(kind,n,val)
     gov=governance(period,site); w=weeks(y,m)
-    sc=[a for a in permit if pmap.get(a["auditor"])=="Site Controller"]; asc=[a for a in permit if pmap.get(a["auditor"])=="Asset Superintendent"]
+    sc=[a for a in permit if assigned_role(a,pmap)=="Site Controller"]; asc=[a for a in permit if assigned_role(a,pmap)=="Asset Superintendent"]
     k1plan=(sum(a+b for a,b in SITE_GROUPS.values())*w) if site=="All" else ((sum(SITE_GROUPS.get(site,(0,0)))*w) or None); k1done=len([a for a in sc if permit_type(a)!="Unclassified"]); k1p=round(100*k1done/k1plan) if k1plan else None; k1c=audit_conf(sc); k1s=rag(k1p,k1c) if sc else "Not enough data"
     k2plan=w; k2done=len([a for a in asc if permit_type(a)!="Unclassified"]); k2p=round(100*k2done/k2plan) if k2plan else None; k2c=audit_conf(asc); k2s=rag(k2p,k2c) if asc else "Not enough data"; k2cov=len({a["site"] for a in asc if a["site"] in ASSET_GROUPS})
-    q=(m-1)//3+1; qstart=date(y,(q-1)*3+1,1); qe=(q-1)*3+3; qend=date(y,qe,calendar.monthrange(y,qe)[1]); qlead=[a for a in all_a if "Leadership Engagement" in a["form_name"] and safe_date(a["audit_date"]) and qstart<=safe_date(a["audit_date"])<=qend and (site=="All" or a["site"]==site) and lmap.get(a["auditor"]) in {"Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager"}]; k3n=len(qlead); k3c=audit_conf(qlead); complete=date.today()>qend
+    q=(m-1)//3+1; qstart=date(y,(q-1)*3+1,1); qe=(q-1)*3+3; qend=date(y,qe,calendar.monthrange(y,qe)[1]); qlead=[a for a in all_a if "Leadership Engagement" in a["form_name"] and safe_date(a["audit_date"]) and qstart<=safe_date(a["audit_date"])<=qend and (site=="All" or a["site"]==site) and assigned_role(a,lmap) in {"Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager"}]; k3n=len(qlead); k3c=audit_conf(qlead); complete=date.today()>qend
     if not qlead:k3s="Not enough data"
     elif k3c is not None and k3c<70:k3s="Red"
     elif k3n>=3 and k3c>=90 and gov["kpi3_coverage"]=="Reasonable":k3s="Green"
     elif complete:k3s="Red" if k3n<=1 else "Amber"
     else:k3s="In progress" if k3c and k3c>=90 else "Amber"
-    mapped=[a for a in tbt if tmap.get(a["auditor"]) in {"W2W OOE","Medic HSEA","Field Hub OIM"}]; counts={r:sum(tmap.get(a["auditor"])==r for a in mapped) for r in ["W2W OOE","Medic HSEA","Field Hub OIM"]}; oo=round(100*counts["W2W OOE"]/w) if w else 0; med=round(100*counts["Medic HSEA"]/w) if w else 0; k4c=audit_conf(mapped)
+    mapped=[a for a in tbt if assigned_role(a,tmap) in {"W2W OOE","Medic HSEA","Field Hub OIM"}]; counts={r:sum(assigned_role(a,tmap)==r for a in mapped) for r in ["W2W OOE","Medic HSEA","Field Hub OIM"]}; oo=round(100*counts["W2W OOE"]/w) if w else 0; med=round(100*counts["Medic HSEA"]/w) if w else 0; k4c=audit_conf(mapped)
     if not mapped:k4s="Not enough data"
     elif oo<50 or med<50 or (k4c is not None and k4c<70) or gov["kpi4_findings"]=="Significant / repeat":k4s="Red"
     elif 50<=med<75:k4s="Needs review"
@@ -291,25 +294,25 @@ if page=="Dashboard": dashboard()
 elif page=="Permit Quality":
     banner("SELF VERIFICATION - LEVEL 4 MONITORING","Control of Work: Permit Quality")
     c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today()); nw=c4.checkbox("New WCC")
-    c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); auditor=c1.text_input("AUDITOR:"); sc=c2.text_input("SITE CONTROLLER:"); ref=c3.text_input("WCC NUMBER:"); routine=c4.checkbox("Routine"); desc=st.text_input("WCC DESCRIPTION:")
-    meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"site_controller":sc,"reference":ref,"wcc_description":desc,"new_wcc":nw,"routine":routine}
+    c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); auditor=c1.text_input("AUDITOR:"); auditor_role=c2.selectbox("AUDITOR ROLE:",["Site Controller","Asset Superintendent","Other"],index=None); sc=c3.text_input("SITE CONTROLLER:"); ref=c4.text_input("WCC NUMBER:"); routine=st.checkbox("Routine"); desc=st.text_input("WCC DESCRIPTION:")
+    meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"auditor_role":auditor_role,"site_controller":sc,"reference":ref,"wcc_description":desc,"new_wcc":nw,"routine":routine}
     purpose("Self-verify the quality of a planned or active Work Control Certificate (WCC), including permit preparation, hazard identification, risk assessment, control selection, authorisation and worksite readiness."); st.markdown('<div class="blackbar">QUESTION</div>',unsafe_allow_html=True); rs=questions("ptw",DATA["ptw"]); st.markdown('<div class="blackbar">ENSURE EACH NON-COMPLIANCE GENERATES A RECORDED SMART ACTION</div>',unsafe_allow_html=True)
     if st.button("Submit Permit Quality Audit",type="primary",use_container_width=True):
-        if not site or not auditor:st.error("Complete SITE / INSTALLATION and AUDITOR.")
+        if not site or not auditor or not auditor_role:st.error("Complete SITE / INSTALLATION, AUDITOR and AUDITOR ROLE.")
         elif nw==routine:st.error("Select exactly one classification: New WCC or Routine.")
         elif any(r["response"] is None for r in rs):st.error("Every question requires a response.")
         else:st.success("Submitted: "+save_audit("Control of Work: Permit Quality",meta,rs))
 elif page=="Toolbox Talk / Permit / POP":
     banner("SELF VERIFICATION - LEVEL 4 MONITORING","Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures")
     c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today()); activity=c4.radio("TYPE",["New WCC","Routine","POP"],index=None)
-    c1,c2,c3=st.columns(3); auditor=c1.text_input("AUDITOR:"); sc=c2.text_input("SITE CONTROLLER:"); ref=c3.text_input("WCC / POP No:"); desc=st.text_input("DESCRIPTION:"); meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"site_controller":sc,"reference":ref,"description":desc,"activity_type":activity}
+    c1,c2,c3=st.columns(3); auditor=c1.text_input("AUDITOR:"); auditor_role=c2.selectbox("AUDITOR ROLE:",["W2W OOE","Medic HSEA","Field Hub OIM","Other"],index=None); sc=c3.text_input("SITE CONTROLLER:"); ref=st.text_input("WCC / POP No:"); desc=st.text_input("DESCRIPTION:"); meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"auditor_role":auditor_role,"site_controller":sc,"reference":ref,"description":desc,"activity_type":activity}
     purpose("Self-verify day-to-day Toolbox Talk, permit and operating-procedure compliance, workforce understanding and implementation of Control of Work requirements."); st.markdown('<div class="blackbar">QUESTION · SITE VISIT REQUIRED · SEQUENTIAL REVIEW</div>',unsafe_allow_html=True); rs=questions("tbt12",DATA["tbt"][:2]); st.markdown('<div class="blackbar">AUDITING A POP? MOVE TO QUESTION 8</div>',unsafe_allow_html=True); rs += questions("pop",[DATA["pop"]]) if activity=="POP" else questions("tbt37",DATA["tbt"][2:])+questions("tbt8",[DATA["pop"]])
     if st.button("Submit TBT / Permit / POP Audit",type="primary",use_container_width=True):
-        if not site or not auditor or not activity:st.error("Complete SITE / INSTALLATION, AUDITOR and TYPE.")
+        if not site or not auditor or not auditor_role or not activity:st.error("Complete SITE / INSTALLATION, AUDITOR, AUDITOR ROLE and TYPE.")
         elif any(r["response"] is None for r in rs):st.error("Every displayed question requires a response.")
         else:st.success("Submitted: "+save_audit("Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures",meta,rs))
 elif page=="Leadership Engagement":
-    banner("Control of Work Leadership Engagement Checklist"); c1,c2,c3,c4=st.columns([1,2,1.4,1.7]); ad=c1.date_input("Date",date.today()); site=c2.text_input("Location / Team"); sc=c3.text_input("Site Controller"); leader=c4.text_input("Leadership Representative"); purpose("Provide a predefined set of Control of Work questions for leadership engagement visits, supporting visible leadership, workforce engagement and assurance discussions."); rs=[]
+    banner("Control of Work Leadership Engagement Checklist"); c1,c2,c3,c4=st.columns([1,2,1.4,1.7]); ad=c1.date_input("Date",date.today()); site=c2.text_input("Location / Team"); sc=c3.text_input("Site Controller"); leader=c4.text_input("Leadership Representative"); auditor_role=st.selectbox("AUDITOR ROLE:",["Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager","Other"],index=None); purpose("Provide a predefined set of Control of Work questions for leadership engagement visits, supporting visible leadership, workforce engagement and assurance discussions."); rs=[]
     for si,(section,qs) in enumerate(DATA["lead"]):
         st.markdown(f'<div class="section-title">{section}</div>',unsafe_allow_html=True)
         for qi,q in enumerate(qs):
@@ -322,11 +325,11 @@ elif page=="Leadership Engagement":
     positive=st.text_area("Positive Observations"); improvement=st.text_area("Opportunities for Improvement"); actions=st.text_area("Actions Agreed"); indicator=st.radio("Overall Control of Work Indicator",["Meets CoW Standard","Does not meet CoW Standard"],index=None); notes=st.text_area("Auditor Notes"); st.info("If one question is No / non-conforming, mark the overall indicator as Does not meet CoW Standard.")
     if st.button("Submit Leadership Engagement",type="primary",use_container_width=True):
         required=[r for r in rs if r["response"]!="Comment"]
-        if not site or not leader:st.error("Complete Location / Team and Leadership Representative.")
+        if not site or not leader or not auditor_role:st.error("Complete Location / Team, Leadership Representative and Auditor Role.")
         elif any(r["response"] is None for r in required):st.error("Every Yes/No question requires a response.")
         elif indicator is None:st.error("Select the Overall Control of Work Indicator.")
         else:
-            meta={"site":site,"audit_date":str(ad),"auditor":leader,"site_controller":sc,"reference":"","positive_observations":positive,"opportunities_for_improvement":improvement,"actions_agreed":actions,"auditor_notes":notes,"overall_indicator":indicator}; st.success("Submitted: "+save_audit("Control of Work Leadership Engagement Checklist",meta,rs,indicator))
+            meta={"site":site,"audit_date":str(ad),"auditor":leader,"auditor_role":auditor_role,"site_controller":sc,"reference":"","positive_observations":positive,"opportunities_for_improvement":improvement,"actions_agreed":actions,"auditor_notes":notes,"overall_indicator":indicator}; st.success("Submitted: "+save_audit("Control of Work Leadership Engagement Checklist",meta,rs,indicator))
 elif page=="Submitted Audits":
     st.header("Submitted Audits"); aa=audits(); df=pd.DataFrame([{k:a[k] for k in ["audit_id","submitted_at","form_name","audit_date","site","auditor","reference","summary"]} for a in aa]); st.dataframe(df,use_container_width=True,hide_index=True) if len(df) else st.info("No submissions yet.")
 else:

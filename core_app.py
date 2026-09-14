@@ -226,7 +226,7 @@ def dashboard():
     elif k3n>=3 and k3c>=90 and gov["kpi3_coverage"]=="Reasonable":k3s="Green"
     elif complete:k3s="Red" if k3n<=1 else "Amber"
     else:k3s="In progress" if k3c and k3c>=90 else "Amber"
-    mapped=[a for a in tbt if assigned_role(a,tmap) in {"W2W OOE","Medic HSEA","Field Hub OIM"}]; counts={r:sum(assigned_role(a,tmap)==r for a in mapped) for r in ["W2W OOE","Medic HSEA","Field Hub OIM"]}; oo=round(100*counts["W2W OOE"]/w) if w else 0; med=round(100*counts["Medic HSEA"]/w) if w else 0; k4c=audit_conf(mapped)
+    mapped=[a for a in tbt if (a.get("metadata") or {}).get("nui_visit",True) and assigned_role(a,tmap) in {"W2W OOE","Medic HSEA","Field Hub OIM"}]; counts={r:sum(assigned_role(a,tmap)==r for a in mapped) for r in ["W2W OOE","Medic HSEA","Field Hub OIM"]}; oo=round(100*counts["W2W OOE"]/w) if w else 0; med=round(100*counts["Medic HSEA"]/w) if w else 0; k4c=audit_conf(mapped)
     if not mapped:k4s="Not enough data"
     elif oo<50 or med<50 or (k4c is not None and k4c<70) or gov["kpi4_findings"]=="Significant / repeat":k4s="Red"
     elif 50<=med<75:k4s="Needs review"
@@ -260,7 +260,7 @@ def dashboard():
     with t3a:
         card("KPI 1 · Tier 3","Site Controller Permit Assurance / Non-Compliance",f"{k1done}/{k1plan}" if k1plan else "—",k1s,f"Completion {k1p if k1p is not None else '—'}% · Whole-permit conformance {k1c if k1c is not None else '—'}% · routine/non-routine reported separately · plan 64 per 4 weeks")
     with t3b:
-        card("KPI 4 · Tier 3","Site Leadership NUI Visits / Engagement",f"OOE {counts['W2W OOE']}/{w}" if mapped else f"OOE 0/{w}",k4s,f"OOE 1 per week · Medic/HSEA {counts['Medic HSEA']}/{w} (1 per week) · Field Hub OIM {counts['Field Hub OIM']}/1 per quarter · conformance {k4c if k4c is not None else '—'}%")
+        card("KPI 4 · Tier 3","Site Leadership NUI Visits / Engagement",f"OOE {counts['W2W OOE']}/{w} · Medic/HSEA {counts['Medic HSEA']}/{w} · Field Hub OIM {counts['Field Hub OIM']}/1" if mapped else f"OOE 0/{w} · Medic/HSEA 0/{w} · Field Hub OIM 0/1",k4s,f"OOE 1 per week · Medic/HSEA 1 per week · Field Hub OIM 1 per quarter · conformance {k4c if k4c is not None else '—'}%")
     st.markdown(f'<div class="exec"><h3>Overall assurance position: {overall}</h3><div>Three-tier framework containing five individual KPIs, covering assurance delivery, whole-permit conformance, leadership engagement and lagging incident performance.</div><div class="focus"><b>Leadership focus:</b> address Red/Amber exceptions, maintain planned assurance coverage and test repeat findings for systemic Control of Work weakness.</div></div>',unsafe_allow_html=True)
     tabs=st.tabs(["Company & Site Performance","Findings & Actions","Work as Imagined vs Work as Done","Auditor View","KPI 5 Data"])
     with tabs[0]:
@@ -315,7 +315,9 @@ elif page=="Permit Quality":
 elif page=="Toolbox Talk / Permit / POP":
     banner("SELF VERIFICATION - LEVEL 4 MONITORING","Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures")
     c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today()); activity=c4.radio("TYPE",["New WCC","Routine","POP"],index=None)
-    c1,c2,c3=st.columns(3); auditor=c1.text_input("AUDITOR:"); auditor_role=c2.selectbox("AUDITOR ROLE:",["W2W OOE","Medic HSEA","Field Hub OIM","Other"],index=None); sc=c3.text_input("SITE CONTROLLER:"); ref=st.text_input("WCC / POP No:"); desc=st.text_input("DESCRIPTION:"); meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"auditor_role":auditor_role,"site_controller":sc,"reference":ref,"description":desc,"activity_type":activity}
+    c1,c2,c3=st.columns(3); auditor=c1.text_input("AUDITOR:"); auditor_role=c2.selectbox("AUDITOR ROLE:",["W2W OOE","Medic HSEA","Field Hub OIM","Other"],index=None); sc=c3.text_input("SITE CONTROLLER:")
+    nui_visit=st.checkbox("NUI VISIT COMPLETED – this audit will contribute to KPI 4",value=True)
+    ref=st.text_input("WCC / POP No:"); desc=st.text_input("DESCRIPTION:"); meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"auditor_role":auditor_role,"site_controller":sc,"reference":ref,"description":desc,"activity_type":activity,"nui_visit":nui_visit}
     purpose("Self-verify day-to-day Toolbox Talk, permit and operating-procedure compliance, workforce understanding and implementation of Control of Work requirements."); st.markdown('<div class="blackbar">QUESTION · SITE VISIT REQUIRED · SEQUENTIAL REVIEW</div>',unsafe_allow_html=True); rs=questions("tbt12",DATA["tbt"][:2]); st.markdown('<div class="blackbar">AUDITING A POP? MOVE TO QUESTION 8</div>',unsafe_allow_html=True); rs += questions("pop",[DATA["pop"]]) if activity=="POP" else questions("tbt37",DATA["tbt"][2:])+questions("tbt8",[DATA["pop"]])
     if st.button("Submit TBT / Permit / POP Audit",type="primary",use_container_width=True):
         if not site or not auditor or not auditor_role or not activity:st.error("Complete SITE / INSTALLATION, AUDITOR, AUDITOR ROLE and TYPE.")

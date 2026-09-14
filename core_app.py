@@ -293,13 +293,14 @@ page=st.sidebar.radio("Navigation",["Dashboard","Permit Quality","Toolbox Talk /
 if page=="Dashboard": dashboard()
 elif page=="Permit Quality":
     banner("SELF VERIFICATION - LEVEL 4 MONITORING","Control of Work: Permit Quality")
-    c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today()); nw=c4.checkbox("New WCC")
-    c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); auditor=c1.text_input("AUDITOR:"); auditor_role=c2.selectbox("AUDITOR ROLE:",["Site Controller","Asset Superintendent","Other"],index=None); sc=c3.text_input("SITE CONTROLLER:"); ref=c4.text_input("WCC NUMBER:"); routine=st.checkbox("Routine"); desc=st.text_input("WCC DESCRIPTION:")
+    c1,c2,c3=st.columns([1.5,1.2,1.2]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today())
+    c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); auditor=c1.text_input("AUDITOR:"); auditor_role=c2.selectbox("AUDITOR ROLE:",["Site Controller","Asset Superintendent","Other"],index=None); sc=c3.text_input("SITE CONTROLLER:"); classification=c4.radio("WCC CLASSIFICATION:",["New WCC","Routine"],index=None); nw=classification=="New WCC"; routine=classification=="Routine"
+    ref=st.text_input("WCC NUMBER:"); desc=st.text_input("WCC DESCRIPTION:")
     meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"auditor_role":auditor_role,"site_controller":sc,"reference":ref,"wcc_description":desc,"new_wcc":nw,"routine":routine}
     purpose("Self-verify the quality of a planned or active Work Control Certificate (WCC), including permit preparation, hazard identification, risk assessment, control selection, authorisation and worksite readiness."); st.markdown('<div class="blackbar">QUESTION</div>',unsafe_allow_html=True); rs=questions("ptw",DATA["ptw"]); st.markdown('<div class="blackbar">ENSURE EACH NON-COMPLIANCE GENERATES A RECORDED SMART ACTION</div>',unsafe_allow_html=True)
     if st.button("Submit Permit Quality Audit",type="primary",use_container_width=True):
         if not site or not auditor or not auditor_role:st.error("Complete SITE / INSTALLATION, AUDITOR and AUDITOR ROLE.")
-        elif nw==routine:st.error("Select exactly one classification: New WCC or Routine.")
+        elif classification is None:st.error("Select exactly one classification: New WCC or Routine.")
         elif any(r["response"] is None for r in rs):st.error("Every question requires a response.")
         else:st.success("Submitted: "+save_audit("Control of Work: Permit Quality",meta,rs))
 elif page=="Toolbox Talk / Permit / POP":
@@ -312,7 +313,7 @@ elif page=="Toolbox Talk / Permit / POP":
         elif any(r["response"] is None for r in rs):st.error("Every displayed question requires a response.")
         else:st.success("Submitted: "+save_audit("Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures",meta,rs))
 elif page=="Leadership Engagement":
-    banner("Control of Work Leadership Engagement Checklist"); c1,c2,c3,c4=st.columns([1,2,1.4,1.7]); ad=c1.date_input("Date",date.today()); site=c2.text_input("Location / Team"); sc=c3.text_input("Site Controller"); leader=c4.text_input("Leadership Representative"); auditor_role=st.selectbox("AUDITOR ROLE:",["Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager","Other"],index=None); purpose("Provide a predefined set of Control of Work questions for leadership engagement visits, supporting visible leadership, workforce engagement and assurance discussions."); rs=[]
+    banner("Control of Work Leadership Engagement Checklist"); c1,c2,c3,c4=st.columns([1,2,1.4,1.7]); ad=c1.date_input("Date",date.today()); site=c2.text_input("Location / Team"); sc=c3.text_input("Site Controller"); leader=c4.text_input("Leadership Representative"); auditor_role=st.selectbox("AUDITOR ROLE:",["Onshore Operations Leadership","Other"],index=None); purpose("Provide a predefined set of Control of Work questions for leadership engagement visits, supporting visible leadership, workforce engagement and assurance discussions."); rs=[]
     for si,(section,qs) in enumerate(DATA["lead"]):
         st.markdown(f'<div class="section-title">{section}</div>',unsafe_allow_html=True)
         for qi,q in enumerate(qs):

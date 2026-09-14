@@ -87,6 +87,7 @@ SITE_GROUPS = {
     "Southern NUI's": (2,1)
 }
 ASSET_GROUPS = ["RN","Cleeton","Northern Flying Team","Northern W2W","Dimlington","27B","Southern Flying Team","Southern W2W","Bacton"]
+SITE_OPTIONS = sorted(set(ASSET_GROUPS + list(SITE_GROUPS)))
 
 
 def db():
@@ -231,7 +232,7 @@ def dashboard():
     mapped=[a for a in tbt if (a.get("metadata") or {}).get("nui_visit",True) and assigned_role(a,tmap) in {"W2W OOE","Medic HSEA","Field Hub OIM"}]; counts={r:sum(assigned_role(a,tmap)==r for a in mapped) for r in ["W2W OOE","Medic HSEA","Field Hub OIM"]}; oo=round(100*counts["W2W OOE"]/w) if w else 0; med=round(100*counts["Medic HSEA"]/w) if w else 0; k4c=audit_conf(mapped)
     if not mapped:k4s="Not enough data"
     elif oo<50 or med<50 or (k4c is not None and k4c<70) or gov["kpi4_findings"]=="Significant / repeat":k4s="Red"
-    elif 50<=med<75:k4s="Needs review"
+    elif med<100:k4s="Amber"
     elif oo<100 or med<100 or (k4c is not None and k4c<90):k4s="Amber"
     else:k4s="Green"
     c=db(); k5rows=c.execute("SELECT * FROM kpi5 WHERE reporting_month=? ORDER BY submitted_at",(period,)).fetchall(); c.close(); k5=k5rows[-1] if k5rows else None
@@ -285,7 +286,7 @@ def dashboard():
             aa=[a for a in permit+tbt+lead if a["auditor"]==n]; rr.append({"Auditor / Leader":n,"Activities":len(aa),"Question conformance %":q_conf(aa),"Whole-audit conformance %":audit_conf(aa),"Sites / Teams":", ".join(sorted({a["site"] for a in aa if a["site"]}))})
         st.dataframe(pd.DataFrame(rr),use_container_width=True,hide_index=True) if rr else st.info("No auditor data.")
     with tabs[4]:
-        st.subheader("KPI 5 Incident Entry"); st.caption("Permit-controlled activity incidents · rolling 12-month reporting"); a,b,c=st.columns(3); current=a.number_input("Rolling 12-month permit-controlled incidents",0,999,0); prev=b.number_input("Previous rolling 12-month incidents",0,999,0); hipo=c.number_input("HiPO events",0,999,0); a,b,c=st.columns(3); injury=a.number_input("Significant injuries (MTC+)",0,999,0); loc=b.number_input("Loss of Containment",0,999,0); major=c.number_input("Major Loss of Containment",0,999,0); a,b,c=st.columns(3); repeat=a.selectbox("Repeat event theme?",["No","Yes"]); recurring=b.selectbox("Recurring permit-control failure?",["No","Yes"]); sig=c.selectbox("Significant increase?",["No","Yes"],help="No numerical threshold is assumed; use the agreed management assessment."); comments=st.text_area("Learning / management comments")
+        st.subheader("KPI 5 Incident Entry"); st.caption("Permit-controlled activity incidents · rolling 12-month reporting"); incident_date=st.date_input("Incident date",date.today()); incident_site=st.selectbox("Site / Asset",["All"]+SITE_OPTIONS); moi_ref=st.text_input("MOI reference"); incident_title=st.text_input("Incident title / short description"); permitted=st.selectbox("Occurred during permitted activity?",["Yes","No"]); a,b,c=st.columns(3); current=a.number_input("Rolling 12-month permit-controlled incidents",0,999,0); prev=b.number_input("Previous rolling 12-month incidents",0,999,0); hipo=c.number_input("HiPO events",0,999,0); a,b,c=st.columns(3); injury=a.number_input("Significant injuries (MTC+)",0,999,0); loc=b.number_input("Loss of Containment",0,999,0); major=c.number_input("Major Loss of Containment",0,999,0); a,b,c=st.columns(3); repeat=a.selectbox("Repeat event theme?",["No","Yes"]); recurring=b.selectbox("Recurring permit-control failure?",["No","Yes"]); sig=c.selectbox("Significant increase?",["No","Yes"],help="No numerical threshold is assumed; use the agreed management assessment."); comments=st.text_area("Learning / management comments"); comments=f"Incident date: {incident_date}; Site/Asset: {incident_site}; MOI reference: {moi_ref}; Title: {incident_title}; Occurred during permitted activity: {permitted}; {comments}"
         if st.button("Save KPI 5 incident entry",type="primary"):
             rid="KPI5-"+uuid.uuid4().hex[:8].upper(); con=db(); con.execute("INSERT INTO kpi5 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(rid,datetime.now().isoformat(timespec="seconds"),period,site,current,prev,hipo,injury,loc,major,repeat,recurring,sig,comments,0)); con.commit(); con.close(); st.success("KPI 5 incident entry saved.")
 
@@ -304,7 +305,7 @@ elif page=="KPI 5 Incidents":
         rid="KPI5-"+uuid.uuid4().hex[:8].upper(); con=db(); con.execute("INSERT INTO kpi5 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(rid,datetime.now().isoformat(timespec="seconds"),period,site,current,prev,hipo,injury,loc,major,repeat,recurring,sig,comments,0)); con.commit(); con.close(); st.success("KPI 5 incident entry saved. Return to Dashboard to view the result.")
 elif page=="Permit Quality":
     banner("SELF VERIFICATION - LEVEL 4 MONITORING","Control of Work: Permit Quality")
-    c1,c2,c3=st.columns([1.5,1.2,1.2]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today())
+    c1,c2,c3=st.columns([1.5,1.2,1.2]); site=c1.selectbox("SITE / INSTALLATION:",["Select"]+SITE_OPTIONS); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today())
     c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); auditor=c1.text_input("AUDITOR:"); auditor_role=c2.selectbox("AUDITOR ROLE:",["Site Controller","Asset Superintendent","Other"],index=None); sc=c3.text_input("SITE CONTROLLER:"); classification=c4.radio("WCC CLASSIFICATION:",["New WCC","Routine"],index=None); nw=classification=="New WCC"; routine=classification=="Routine"
     ref=st.text_input("WCC NUMBER:"); desc=st.text_input("WCC DESCRIPTION:")
     meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"auditor_role":auditor_role,"site_controller":sc,"reference":ref,"wcc_description":desc,"new_wcc":nw,"routine":routine}
@@ -316,7 +317,7 @@ elif page=="Permit Quality":
         else:st.success("Submitted: "+save_audit("Control of Work: Permit Quality",meta,rs))
 elif page=="Toolbox Talk / Permit / POP":
     banner("SELF VERIFICATION - LEVEL 4 MONITORING","Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures")
-    c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today()); activity=c4.radio("TYPE",["New WCC","Routine","POP"],index=None)
+    c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); site=c1.selectbox("SITE / INSTALLATION:",["Select"]+SITE_OPTIONS); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today()); activity=c4.radio("TYPE",["New WCC","Routine","POP"],index=None)
     c1,c2,c3=st.columns(3); auditor=c1.text_input("AUDITOR:"); auditor_role=c2.selectbox("AUDITOR ROLE:",["W2W OOE","Medic HSEA","Field Hub OIM","Other"],index=None); sc=c3.text_input("SITE CONTROLLER:")
     nui_visit=st.checkbox("NUI VISIT COMPLETED – this audit will contribute to KPI 4",value=True)
     ref=st.text_input("WCC / POP No:"); desc=st.text_input("DESCRIPTION:"); meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"auditor_role":auditor_role,"site_controller":sc,"reference":ref,"description":desc,"activity_type":activity,"nui_visit":nui_visit}
@@ -326,7 +327,7 @@ elif page=="Toolbox Talk / Permit / POP":
         elif any(r["response"] is None for r in rs):st.error("Every displayed question requires a response.")
         else:st.success("Submitted: "+save_audit("Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures",meta,rs))
 elif page=="Leadership Engagement":
-    banner("Control of Work Leadership Engagement Checklist"); c1,c2,c3,c4=st.columns([1,2,1.4,1.7]); ad=c1.date_input("Date",date.today()); site=c2.text_input("Location / Team"); sc=c3.text_input("Site Controller"); leader=c4.text_input("Leadership Representative"); auditor_role=st.selectbox("AUDITOR ROLE:",["Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager","Other"],index=None); purpose("Provide a predefined set of Control of Work questions for leadership engagement visits, supporting visible leadership, workforce engagement and assurance discussions."); rs=[]
+    banner("Control of Work Leadership Engagement Checklist"); c1,c2,c3,c4=st.columns([1,2,1.4,1.7]); ad=c1.date_input("Date",date.today()); site=c2.selectbox("Location / Team",["Select"]+SITE_OPTIONS); sc=c3.text_input("Site Controller"); leader=c4.text_input("Leadership Representative"); auditor_role=st.selectbox("AUDITOR ROLE:",["Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager","Other"],index=None); purpose("Provide a predefined set of Control of Work questions for leadership engagement visits, supporting visible leadership, workforce engagement and assurance discussions."); rs=[]
     for si,(section,qs) in enumerate(DATA["lead"]):
         st.markdown(f'<div class="section-title">{section}</div>',unsafe_allow_html=True)
         for qi,q in enumerate(qs):

@@ -1,12 +1,70 @@
 import streamlit as st
 import pandas as pd
-import sqlite3, json, uuid, calendar
+import sqlite3, json, uuid, calendar, os
 from pathlib import Path
+
+try:
+    import psycopg
+except ImportError:
+    psycopg = None
 from datetime import date, datetime
 
 BASE = Path(__file__).parent
 DATA = json.loads((BASE / "questions.json").read_text(encoding="utf-8"))
 DB = BASE / "assurance.db"
+
+# The deployed demo uses PostgreSQL when DATABASE_URL is configured in
+# Streamlit Secrets. SQLite remains available for local development.
+try:
+    DATABASE_URL = st.secrets.get("DATABASE_URL", "")
+except Exception:
+    DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+
+class DatabaseConnection:
+    """Small compatibility layer for SQLite and PostgreSQL."""
+
+    def __init__(self):
+        if DATABASE_URL:
+            if psycopg is None:
+                raise RuntimeError("PostgreSQL support is not installed.")
+            self.connection = psycopg.connect(DATABASE_URL)
+            self.postgres = True
+        else:
+            self.connection = sqlite3.connect(DB)
+            self.postgres = False
+
+    def execute(self, query, params=()):
+        if self.postgres:
+            if query == "INSERT OR REPLACE INTO roles VALUES(?,?,?)":
+                query = (
+                    "INSERT INTO roles(mapping_type,person_name,role_name) "
+                    "VALUES(%s,%s,%s) ON CONFLICT(mapping_type,person_name) "
+                    "DO UPDATE SET role_name=EXCLUDED.role_name"
+                )
+            elif query.startswith("INSERT OR REPLACE INTO kpi5 VALUES("):
+                query = query.replace("INSERT OR REPLACE INTO kpi5", "INSERT INTO kpi5")
+                query = query.replace("?", "%s")
+                query += (
+                    " ON CONFLICT(record_id) DO UPDATE SET "
+                    "submitted_at=EXCLUDED.submitted_at, reporting_month=EXCLUDED.reporting_month, "
+                    "site=EXCLUDED.site, current_count=EXCLUDED.current_count, "
+                    "previous_count=EXCLUDED.previous_count, hipo=EXCLUDED.hipo, "
+                    "injury=EXCLUDED.injury, loc=EXCLUDED.loc, major_loc=EXCLUDED.major_loc, "
+                    "repeat_theme=EXCLUDED.repeat_theme, recurring_failure=EXCLUDED.recurring_failure, "
+                    "significant_increase=EXCLUDED.significant_increase, comments=EXCLUDED.comments, "
+                    "demo=EXCLUDED.demo"
+                )
+            else:
+                query = query.replace("?", "%s")
+        return self.connection.execute(query, params)
+
+    def commit(self):
+        self.connection.commit()
+
+    def close(self):
+        self.connection.close()
+
 
 st.set_page_config(page_title="Operational Assurance - Control of Work", page_icon="🔒", layout="wide")
 st.markdown("""
@@ -32,7 +90,7 @@ ASSET_GROUPS = ["Asset A","Asset B","Asset C","North Flying Team","North W2W","O
 
 
 def db():
-    c=sqlite3.connect(DB)
+    c=DatabaseConnection()
     c.execute("CREATE TABLE IF NOT EXISTS audits(audit_id TEXT PRIMARY KEY,submitted_at TEXT,form_name TEXT,audit_date TEXT,site TEXT,auditor TEXT,reference TEXT,metadata TEXT,responses TEXT,summary TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS roles(mapping_type TEXT,person_name TEXT,role_name TEXT,PRIMARY KEY(mapping_type,person_name))")
     c.execute("CREATE TABLE IF NOT EXISTS kpi5(record_id TEXT PRIMARY KEY,submitted_at TEXT,reporting_month TEXT,site TEXT,current_count INTEGER,previous_count INTEGER,hipo INTEGER,injury INTEGER,loc INTEGER,major_loc INTEGER,repeat_theme TEXT,recurring_failure TEXT,significant_increase TEXT,comments TEXT,demo INTEGER DEFAULT 0)")

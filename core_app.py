@@ -112,6 +112,12 @@ def audits():
         except:a["responses"]=[]
     return out
 
+def reportable(a):
+    """Keep live records only; synthetic/demo and obvious test submissions are excluded."""
+    aid=str(a.get("audit_id","")).upper(); auditor=str(a.get("auditor","")).strip().lower()
+    ref=str(a.get("reference","")).strip().lower(); meta=a.get("metadata") or {}
+    return not (aid.startswith("DEMO-") or bool(meta.get("demo")) or auditor.startswith("test") or ref.startswith("demo-"))
+
 def role_map(kind):
     c=db(); r=dict(c.execute("SELECT person_name,role_name FROM roles WHERE mapping_type=?",(kind,)).fetchall()); c.close(); return r
 
@@ -196,7 +202,7 @@ def dashboard():
     st.markdown('<div class="dash"><h1>Control of Work KPI Dashboard</h1><p>Operational assurance · performance, coverage and leadership oversight</p></div>',unsafe_allow_html=True)
     c1,c2,c3=st.columns([1,1,2]); md=c1.date_input("Reporting month",date.today().replace(day=1)); demo=c2.toggle("Demo mode")
     if c3.button("Load / refresh demonstration data",disabled=not demo,use_container_width=True):seed_demo(); st.rerun()
-    y,m=md.year,md.month; period=md.strftime("%Y-%m"); all_a=audits(); month=[a for a in all_a if safe_date(a["audit_date"]) and safe_date(a["audit_date"]).year==y and safe_date(a["audit_date"]).month==m]
+    y,m=md.year,md.month; period=md.strftime("%Y-%m"); all_a=[a for a in audits() if reportable(a)]; month=[a for a in all_a if safe_date(a["audit_date"]) and safe_date(a["audit_date"]).year==y and safe_date(a["audit_date"]).month==m]
     sites=sorted({a["site"] for a in month if a["site"]}); site=st.selectbox("Site / Team",["All"]+sites)
     view=month if site=="All" else [a for a in month if a["site"]==site]
     permit=[a for a in view if a["form_name"]=="Control of Work: Permit Quality"]; tbt=[a for a in view if "Toolbox Talk" in a["form_name"]]; lead=[a for a in view if "Leadership Engagement" in a["form_name"]]
@@ -229,12 +235,29 @@ def dashboard():
         current,prev,hipo,inj,loc,major,repeat,recurring,sig=k5[4],k5[5],k5[6],k5[7],k5[8],k5[9],k5[10],k5[11],k5[12]
         k5s="Red" if sig=="Yes" or hipo>=2 or inj>=2 or major>=1 or recurring=="Yes" else ("Amber" if current>prev or hipo==1 or inj==1 or loc>=1 or repeat=="Yes" else "Green"); k5v=str(current); k5detail=f"Previous {prev} · HiPO {hipo} · MTC+ {inj} · LOC {loc}"
     statuses=[k1s,k2s,k3s,k4s,k5s]; assessed=[x for x in statuses if x in ("Green","Amber","Red")]; overall="Red" if "Red" in assessed else ("Amber" if "Amber" in assessed else ("Green" if len(assessed)==5 else "Not enough data"))
-    cols=st.columns(5)
-    with cols[0]:card("KPI 1 · Tier 3","Site Controller Permit Non-Compliance",f"{k1c}%" if k1c is not None else "—",k1s,f"Plan {k1done}/{k1plan or '—'}")
-    with cols[1]:card("KPI 2 · Tier 2","Asset Superintendent Permit Non-Compliance",f"{k2c}%" if k2c is not None else "—",k2s,f"Plan {k2done}/{k2plan} · coverage {k2cov}/9")
-    with cols[2]:card("KPI 3 · Tier 2","Leadership Engagement",f"{k3n}/3" if qlead else "—",k3s,f"Q{q} · {k3c if k3c is not None else '—'}% conformance")
-    with cols[3]:card("KPI 4 · Tier 3","Site Leadership Visits",f"{k4c}%" if k4c is not None else "—",k4s,f"OOE {counts['W2W OOE']}/{w} · HSEA {counts['Medic HSEA']}/{w}")
-    with cols[4]:card("KPI 5 · Tier 1","Permit-Controlled Incidents",k5v,k5s,k5detail)
+
+    # Three management tiers containing five individual KPIs. Each KPI retains
+    # its own target, denominator and intervention threshold.
+    st.markdown("### Tier 1 - Strategic / Leadership")
+    st.caption("Senior leadership oversight of Control of Work trends, systemic weaknesses and permit-controlled incident risk.")
+    with st.container():
+        card("KPI 5 · Tier 1","Permit-Controlled Activity Incident Performance",k5v,k5s,k5detail)
+
+    st.markdown("### Tier 2 - Functional")
+    st.caption("Asset and functional leadership oversight of assurance performance, asset coverage and leadership engagement.")
+    t2a,t2b=st.columns(2)
+    with t2a:
+        card("KPI 2 · Tier 2","Asset Superintendent Permit Quality",f"{k2done}/{k2plan}" if k2plan else "—",k2s,f"Completion {k2p if k2p is not None else '—'}% · Conformance {k2c if k2c is not None else '—'}% · coverage {k2cov}/9 asset groups")
+    with t2b:
+        card("KPI 3 · Tier 2","Onshore Leadership NUI Engagement",f"{k3n} engagements" if qlead else "—",k3s,f"Q{q} · {k3c if k3c is not None else '—'}% checklist conformance · target 3 per quarter")
+
+    st.markdown("### Tier 3 - Operational")
+    st.caption("Site-level visibility of permit quality, supervision, compliance monitoring and worksite controls.")
+    t3a,t3b=st.columns(2)
+    with t3a:
+        card("KPI 1 · Tier 3","Site Controller Permit Quality",f"{k1done}/{k1plan}" if k1plan else "—",k1s,f"Completion {k1p if k1p is not None else '—'}% · Conformance {k1c if k1c is not None else '—'}% · routine/non-routine reported separately")
+    with t3b:
+        card("KPI 4 · Tier 3","Site Leadership NUI Visits",f"OOE {counts['W2W OOE']}/{w}" if mapped else "—",k4s,f"Medic/HSEA {counts['Medic HSEA']}/{w} · Field Hub OIM {counts['Field Hub OIM']}/1 per quarter · conformance {k4c if k4c is not None else '—'}%")
     st.markdown(f'<div class="exec"><h3>Overall assurance position: {overall}</h3><div>Five-tier view combining assurance delivery, whole-permit conformance, leadership engagement and lagging incident performance.</div><div class="focus"><b>Leadership focus:</b> address Red/Amber exceptions, maintain planned assurance coverage and test repeat findings for systemic Control of Work weakness.</div></div>',unsafe_allow_html=True)
     tabs=st.tabs(["Company & Site Performance","Findings & Actions","Work as Imagined vs Work as Done","Auditor View","KPI 5 Data"])
     with tabs[0]:

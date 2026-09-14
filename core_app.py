@@ -5,7 +5,7 @@ from pathlib import Path
 
 try:
     import psycopg
-except ImportError:
+except ImportError:coverage 0/9 asset groups · target 1 per week
     psycopg = None
 from datetime import date, datetime
 
@@ -249,7 +249,7 @@ def dashboard():
     with t2a:
         card("KPI 2 · Tier 2","Asset Superintendent Permit Assurance / Non-Compliance",f"{k2done}/{k2plan}" if k2plan else "—",k2s,f"Completion {k2p if k2p is not None else '—'}% · Conformance {k2c if k2c is not None else '—'}% · coverage {k2cov}/9 asset groups")
     with t2b:
-        card("KPI 3 · Tier 2","Onshore Operations Leadership NUI Engagement",f"{k3n} engagements" if qlead else "—",k3s,f"Q{q} · {k3c if k3c is not None else '—'}% checklist conformance · target 3 per quarter")
+        card("KPI 3 · Tier 2","Onshore Operations Leadership NUI Engagement",f"{k3n} engagements" if qlead else "—",k3s,f"Q{q} · {k3c if k3c is not None else '—'}% checklist conformance · minimum target 3 per quarter")
 
     st.markdown("### Tier 3 - Operational")
     st.caption("Site-level visibility of permit quality, supervision, compliance monitoring and worksite controls.")

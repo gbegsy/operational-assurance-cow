@@ -82,11 +82,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 SITE_GROUPS = {
-    "Asset A": (1,1), "Asset B": (1,1), "Asset C": (1,1),
-    "North NUI Group": (2,1), "Gas Terminal": (1,1),
-    "Offshore Hub": (1,1), "South NUI Group": (2,1)
+    "Dimlington": (1,1), "Cleeton": (1,1), "Ravenspurn North": (1,1),
+    "Northern NUI's": (2,1), "Bacton": (1,1), "Leman 27BC": (1,1),
+    "Southern NUI's": (2,1)
 }
-ASSET_GROUPS = ["Asset A","Asset B","Asset C","North Flying Team","North W2W","Offshore Hub","South Flying Team","South W2W","Gas Terminal"]
+ASSET_GROUPS = ["RN","Cleeton","Northern Flying Team","Northern W2W","Dimlington","27B","Southern Flying Team","Southern W2W","Bacton"]
 
 
 def db():
@@ -218,14 +218,16 @@ def dashboard():
                 if val!=cur:set_role(kind,n,val)
     gov=governance(period,site); w=weeks(y,m)
     sc=[a for a in permit if assigned_role(a,pmap)=="Site Controller"]; asc=[a for a in permit if assigned_role(a,pmap)=="Asset Superintendent"]
-    k1plan=(sum(a+b for a,b in SITE_GROUPS.values())*w) if site=="All" else ((sum(SITE_GROUPS.get(site,(0,0)))*w) or None); k1done=len([a for a in sc if permit_type(a)!="Unclassified"]); k1p=round(100*k1done/k1plan) if k1plan else None; k1c=audit_conf(sc); k1s=rag(k1p,k1c) if sc else "Not enough data"
+    k1plan=(sum(a+b for a,b in SITE_GROUPS.values())*w) if site=="All" else ((sum(SITE_GROUPS.get(site,(0,0)))*w) or None); k1done=len([a for a in sc if permit_type(a)!="Unclassified"]); k1routine=sum(1 for a in sc if permit_type(a)=="Routine"); k1nonroutine=sum(1 for a in sc if permit_type(a)=="Non-Routine"); k1p=round(100*k1done/k1plan) if k1plan else None; k1c=audit_conf(sc); k1s=rag(k1p,k1c) if sc else "Not enough data"
     k2plan=w; k2done=len([a for a in asc if permit_type(a)!="Unclassified"]); k2p=round(100*k2done/k2plan) if k2plan else None; k2c=audit_conf(asc); k2s=rag(k2p,k2c) if asc else "Not enough data"; k2cov=len({a["site"] for a in asc if a["site"] in ASSET_GROUPS})
-    q=(m-1)//3+1; qstart=date(y,(q-1)*3+1,1); qe=(q-1)*3+3; qend=date(y,qe,calendar.monthrange(y,qe)[1]); qlead=[a for a in all_a if "Leadership Engagement" in a["form_name"] and safe_date(a["audit_date"]) and qstart<=safe_date(a["audit_date"])<=qend and (site=="All" or a["site"]==site) and assigned_role(a,lmap)=="Onshore Operations Leadership"]; k3n=len(qlead); k3c=audit_conf(qlead); complete=date.today()>qend
+    q=(m-1)//3+1; qstart=date(y,(q-1)*3+1,1); qe=(q-1)*3+3; qend=date(y,qe,calendar.monthrange(y,qe)[1]); k3_roles={"Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager"}; qlead=[a for a in all_a if "Leadership Engagement" in a["form_name"] and safe_date(a["audit_date"]) and qstart<=safe_date(a["audit_date"])<=qend and (site=="All" or a["site"]==site) and assigned_role(a,lmap) in k3_roles]; k3n=len(qlead); k3c=audit_conf(qlead); complete=date.today()>qend
     if not qlead:k3s="Not enough data"
     elif k3c is not None and k3c<70:k3s="Red"
+    elif k3c is not None and k3c<70:k3s="Red"
+    elif k3n<=1:k3s="Red"
+    elif k3n==2 or (k3c is not None and k3c<90):k3s="Amber"
     elif k3n>=3 and k3c>=90 and gov["kpi3_coverage"]=="Reasonable":k3s="Green"
-    elif complete:k3s="Red" if k3n<=1 else "Amber"
-    else:k3s="In progress" if k3c and k3c>=90 else "Amber"
+    else:k3s="Amber"
     mapped=[a for a in tbt if (a.get("metadata") or {}).get("nui_visit",True) and assigned_role(a,tmap) in {"W2W OOE","Medic HSEA","Field Hub OIM"}]; counts={r:sum(assigned_role(a,tmap)==r for a in mapped) for r in ["W2W OOE","Medic HSEA","Field Hub OIM"]}; oo=round(100*counts["W2W OOE"]/w) if w else 0; med=round(100*counts["Medic HSEA"]/w) if w else 0; k4c=audit_conf(mapped)
     if not mapped:k4s="Not enough data"
     elif oo<50 or med<50 or (k4c is not None and k4c<70) or gov["kpi4_findings"]=="Significant / repeat":k4s="Red"
@@ -258,7 +260,7 @@ def dashboard():
     st.caption("Site-level visibility of permit quality, supervision, compliance monitoring and worksite controls.")
     t3a,t3b=st.columns(2)
     with t3a:
-        card("KPI 1 · Tier 3","Site Controller Permit Assurance / Non-Compliance",f"{k1done}/{k1plan}" if k1plan else "—",k1s,f"Completion {k1p if k1p is not None else '—'}% · Whole-permit conformance {k1c if k1c is not None else '—'}% · routine/non-routine reported separately · plan 64 per 4 weeks")
+        card("KPI 1 · Tier 3","Site Controller Permit Assurance / Non-Compliance",f"{k1done}/{k1plan}" if k1plan else "—",k1s,f"Completion {k1p if k1p is not None else '—'}% · Whole-permit conformance {k1c if k1c is not None else '—'}% · Routine {k1routine} · Non-routine {k1nonroutine} · target 16 per week / 64 per 4 weeks")
     with t3b:
         card("KPI 4 · Tier 3","Site Leadership NUI Visits / Engagement",f"OOE {counts['W2W OOE']}/{w} · Medic/HSEA {counts['Medic HSEA']}/{w} · Field Hub OIM {counts['Field Hub OIM']}/1" if mapped else f"OOE 0/{w} · Medic/HSEA 0/{w} · Field Hub OIM 0/1",k4s,f"OOE 1 per week · Medic/HSEA 1 per week · Field Hub OIM 1 per quarter · conformance {k4c if k4c is not None else '—'}%")
     st.markdown(f'<div class="exec"><h3>Overall assurance position: {overall}</h3><div>Three-tier framework containing five individual KPIs, covering assurance delivery, whole-permit conformance, leadership engagement and lagging incident performance.</div><div class="focus"><b>Leadership focus:</b> address Red/Amber exceptions, maintain planned assurance coverage and test repeat findings for systemic Control of Work weakness.</div></div>',unsafe_allow_html=True)
@@ -324,7 +326,7 @@ elif page=="Toolbox Talk / Permit / POP":
         elif any(r["response"] is None for r in rs):st.error("Every displayed question requires a response.")
         else:st.success("Submitted: "+save_audit("Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures",meta,rs))
 elif page=="Leadership Engagement":
-    banner("Control of Work Leadership Engagement Checklist"); c1,c2,c3,c4=st.columns([1,2,1.4,1.7]); ad=c1.date_input("Date",date.today()); site=c2.text_input("Location / Team"); sc=c3.text_input("Site Controller"); leader=c4.text_input("Leadership Representative"); auditor_role=st.selectbox("AUDITOR ROLE:",["Onshore Operations Leadership","Other"],index=None); purpose("Provide a predefined set of Control of Work questions for leadership engagement visits, supporting visible leadership, workforce engagement and assurance discussions."); rs=[]
+    banner("Control of Work Leadership Engagement Checklist"); c1,c2,c3,c4=st.columns([1,2,1.4,1.7]); ad=c1.date_input("Date",date.today()); site=c2.text_input("Location / Team"); sc=c3.text_input("Site Controller"); leader=c4.text_input("Leadership Representative"); auditor_role=st.selectbox("AUDITOR ROLE:",["Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager","Other"],index=None); purpose("Provide a predefined set of Control of Work questions for leadership engagement visits, supporting visible leadership, workforce engagement and assurance discussions."); rs=[]
     for si,(section,qs) in enumerate(DATA["lead"]):
         st.markdown(f'<div class="section-title">{section}</div>',unsafe_allow_html=True)
         for qi,q in enumerate(qs):

@@ -251,13 +251,12 @@ page=st.sidebar.radio("Navigation",["Dashboard","Permit Quality","Toolbox Talk /
 if page=="Dashboard": dashboard()
 elif page=="Permit Quality":
     banner("SELF VERIFICATION - LEVEL 4 MONITORING","Control of Work: Permit Quality")
-    c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today()); nw=c4.checkbox("New WCC")
-    c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); auditor=c1.text_input("AUDITOR:"); sc=c2.text_input("SITE CONTROLLER:"); ref=c3.text_input("WCC NUMBER:"); routine=c4.checkbox("Routine"); desc=st.text_input("WCC DESCRIPTION:")
-    meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"site_controller":sc,"reference":ref,"wcc_description":desc,"new_wcc":nw,"routine":routine}
+    c1,c2,c3=st.columns([1.5,1.2,1.2]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today())
+    c1,c2,c3=st.columns([1.5,1.2,1.2]); auditor=c1.text_input("AUDITOR:"); sc=c2.text_input("SITE CONTROLLER:"); ref=c3.text_input("WCC NUMBER:"); desc=st.text_input("WCC DESCRIPTION:")
+    meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"site_controller":sc,"reference":ref,"wcc_description":desc,"new_wcc":False,"routine":True}
     purpose("Self-verify the quality of a planned or active Work Control Certificate (WCC), including permit preparation, hazard identification, risk assessment, control selection, authorisation and worksite readiness."); st.markdown('<div class="blackbar">QUESTION</div>',unsafe_allow_html=True); rs=questions("ptw",DATA["ptw"]); st.markdown('<div class="blackbar">ENSURE EACH NON-COMPLIANCE GENERATES A RECORDED SMART ACTION</div>',unsafe_allow_html=True)
     if st.button("Submit Permit Quality Audit",type="primary",use_container_width=True):
         if not site or not auditor:st.error("Complete SITE / INSTALLATION and AUDITOR.")
-        elif nw==routine:st.error("Select exactly one classification: New WCC or Routine.")
         elif any(r["response"] is None for r in rs):st.error("Every question requires a response.")
         else:st.success("Submitted: "+save_audit("Control of Work: Permit Quality",meta,rs))
 elif page=="Toolbox Talk / Permit / POP":

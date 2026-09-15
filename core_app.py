@@ -1,5 +1,4 @@
-        rid="KPI5-"+uuid.uuid4().hex[:8].upper(); con=db(); con.execute("INSERT INTO kpi5 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(rid,datetime.now().isoformat(timespec="seconds"),incident_date.strftime("%Y-%m"),incident_site,current,prev,hipo,injury,loc,major,repeat,recurring,sig,comments,0)); con.commit(); con.close(); st.success("KPI 5 incident entry saved.")
-import streamlit as st
+ import streamlit as st
 import pandas as pd
 import sqlite3, json, uuid, calendar, os
 from pathlib import Path

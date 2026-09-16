@@ -196,11 +196,19 @@ def dashboard():
     view=month if site=="All" else [a for a in month if a["site"]==site]
     permit=[a for a in view if a["form_name"]=="Control of Work: Permit Quality"]; tbt=[a for a in view if "Toolbox Talk" in a["form_name"]]; lead=[a for a in view if "Leadership Engagement" in a["form_name"]]
     pmap,tmap,lmap=role_map("permit"),role_map("tbt"),role_map("lead")
+    # Default unmapped auditors by audit family so existing records feed the
+    # dashboard immediately. An explicit saved role always takes precedence.
+    for a in permit:
+        if a["auditor"] and a["auditor"] not in pmap:pmap[a["auditor"]]="Site Controller"
+    for a in tbt:
+        if a["auditor"] and a["auditor"] not in tmap:tmap[a["auditor"]]="W2W OOE"
+    for a in lead:
+        if a["auditor"] and a["auditor"] not in lmap:lmap[a["auditor"]]="Operations Director"
     with st.expander("KPI role configuration"):
-        specs=[("permit",permit,["Site Controller","Asset Superintendent","Other"]),("tbt",tbt,["W2W OOE","Medic HSEA","Field Hub OIM","Other"]),("lead",lead,["Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager","Other"])]
-        for kind,rows,opts in specs:
+        specs=[("permit",permit,["Site Controller","Asset Superintendent","Other"],pmap),("tbt",tbt,["W2W OOE","Medic HSEA","Field Hub OIM","Other"],tmap),("lead",lead,["Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager","Other"],lmap)]
+        for kind,rows,opts,current_map in specs:
             for n in sorted({a["auditor"] for a in rows if a["auditor"]}):
-                cur=role_map(kind).get(n,"Other"); val=st.selectbox(n,opts,index=opts.index(cur) if cur in opts else len(opts)-1,key=f"r-{kind}-{n}")
+                cur=current_map.get(n,"Other"); val=st.selectbox(n,opts,index=opts.index(cur) if cur in opts else len(opts)-1,key=f"r-{kind}-{n}")
                 if val!=cur:set_role(kind,n,val)
     gov=governance(period,site); w=weeks(y,m)
     sc=[a for a in permit if pmap.get(a["auditor"])=="Site Controller"]; asc=[a for a in permit if pmap.get(a["auditor"])=="Asset Superintendent"]

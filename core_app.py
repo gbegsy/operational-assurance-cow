@@ -277,7 +277,7 @@ def dashboard():
     with st.container(border=True):
         c1,c2,c3=st.columns(3); md=c1.date_input("PERIOD VIEW",date.today().replace(day=1)); c2.selectbox("REPORTING BASIS",["Monthly KPI review"])
         y,m=md.year,md.month; period=md.strftime("%Y-%m"); month=[a for a in all_a if safe_date(a["audit_date"]) and safe_date(a["audit_date"]).year==y and safe_date(a["audit_date"]).month==m]
-        sites=sorted({a["site"] for a in month if a["site"]}); site=c3.selectbox("ASSET / REGION",["All assets and teams"]+sites)
+        sites=sorted(set(ASSET_GROUPS)|{a["site"] for a in month if a["site"]}); site=c3.selectbox("ASSET / REGION",["All assets and teams"]+sites)
     site="All" if site=="All assets and teams" else site
     st.markdown(f'<div class="selection">Showing: {md.strftime("%B %Y")} only &nbsp;|&nbsp; Monthly KPI review &nbsp;|&nbsp; {"All assets and teams" if site=="All" else site}</div>',unsafe_allow_html=True)
     view=month if site=="All" else [a for a in month if a["site"]==site]
@@ -319,7 +319,17 @@ def dashboard():
         current,prev,hipo,inj,loc,major,repeat,recurring,sig=k5[4],k5[5],k5[6],k5[7],k5[8],k5[9],k5[10],k5[11],k5[12]
         k5s="Red" if sig=="Yes" or hipo>=2 or inj>=2 or major>=1 or recurring=="Yes" else ("Amber" if current>prev or hipo==1 or inj==1 or loc>=1 or repeat=="Yes" else "Green"); k5v=str(current); k5detail=f"Previous {prev} · HiPO {hipo} · MTC+ {inj} · LOC {loc}"
     statuses=[k1s,k2s,k3s,k4s,k5s]; assessed=[x for x in statuses if x in ("Green","Amber","Red")]; overall="Red" if "Red" in assessed else ("Amber" if "Amber" in assessed else ("Green" if len(assessed)==5 else "Not enough data"))
+    kpi_names=["KPI 1","KPI 2","KPI 3","KPI 4","KPI 5"]; adverse=[kpi_names[i] for i,x in enumerate(statuses) if x=="Red"]
+    negative=[r for a in permit+tbt+lead for r in a["responses"] if str(r.get("response","")).lower()=="no"]; action_findings=[r for a in permit+tbt for r in a["responses"] if str(r.get("response","")).lower()=="no"]
+    bar1=sum((r.get("bar_rating") or "")=="BAR 1" for r in negative); action_recorded=sum(bool((r.get("smart_action") or "").strip()) for r in action_findings)
+    unclassified=sum(permit_type(a)=="Unclassified" for a in permit); missing_core=sum(not a.get("site") or not a.get("auditor") for a in view); quality_issues=unclassified+missing_core+max(0,len(action_findings)-action_recorded)
     st.markdown(f'<div class="exec"><h3>Overall Control of Work position: {overall.upper()}</h3><div>Results reflect the selected reporting month and asset or team view.</div></div>',unsafe_allow_html=True)
+    st.warning("EARLY WORKING DRAFT · KPI tolerances and calculations remain subject to Perenco validation.")
+    focus=(f"The current position is driven by {', '.join(adverse)}. " if adverse else "No KPI is currently assessed Red. ")+f"The selected view contains {len(negative)} non-compliant response{'s' if len(negative)!=1 else ''}, including {bar1} BAR 1 finding{'s' if bar1!=1 else ''}. {intervention(overall)}"
+    st.markdown("#### Leadership summary"); st.info(focus)
+    d1,d2,d3=st.columns(3); d1.metric("KPI coverage",f"{len(assessed)}/5 assessed"); d2.metric("Action capture",f"{action_recorded}/{len(action_findings)}" if action_findings else "No findings"); d3.metric("Data quality","Review needed" if quality_issues else "Complete")
+    if quality_issues:
+        st.caption(f"Data checks: {unclassified} unclassified permit audit(s), {missing_core} record(s) missing site/auditor, and {max(0,len(action_findings)-action_recorded)} operational non-compliance(s) without a recorded SMART action.")
     st.markdown('<div class="section-head">Five KPI results</div>',unsafe_allow_html=True)
     cols=st.columns(5)
     k1new=sum(permit_type(a)=="New WCC" for a in sc); k1routine=sum(permit_type(a)=="Routine" for a in sc)
@@ -362,7 +372,11 @@ def dashboard():
         for a in permit+tbt+lead:
             for r in a["responses"]:
                 if str(r.get("response","")).lower()=="no":rows.append({"Site":a["site"],"Auditor":a["auditor"],"Form":a["form_name"],"BAR":r.get("bar_rating",""),"Finding":r.get("question",""),"Action":r.get("smart_action") or r.get("comments_evidence","")})
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True) if rows else st.success("No negative assurance responses in this view.")
+        if rows:
+            findings_df=pd.DataFrame(rows); st.dataframe(findings_df,use_container_width=True,hide_index=True)
+            repeat_df=(findings_df.groupby(["Finding","BAR"],dropna=False).agg(Occurrences=("Finding","size"),Sites=("Site",lambda x:", ".join(sorted({str(v) for v in x if v})))).reset_index().sort_values(["Occurrences","BAR"],ascending=[False,True]).head(5))
+            st.markdown("#### Most frequent non-compliant questions"); st.dataframe(repeat_df,use_container_width=True,hide_index=True)
+        else:st.success("No negative assurance responses in this view.")
     with tabs[2]:
         st.markdown("**Work as Imagined** — the question sets represent the expected Control of Work standard and intended controls."); c1,c2,c3=st.columns(3); c1.metric("Question conformance",f"{q_conf(permit+tbt)}%" if q_conf(permit+tbt) is not None else "—"); c2.metric("Permit whole-audit conformance",f"{audit_conf(permit)}%" if audit_conf(permit) is not None else "—"); c3.metric("TBT/POP whole-audit conformance",f"{audit_conf(tbt)}%" if audit_conf(tbt) is not None else "—")
         st.markdown("#### Leadership interpretation · Work as Done")

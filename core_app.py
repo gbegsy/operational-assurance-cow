@@ -75,6 +75,7 @@ st.markdown("""
 .oa-banner{background:#000;color:#fff;min-height:118px;display:flex;align-items:center;justify-content:center;gap:26px;text-align:center;margin-bottom:8px}.oa-logo{width:145px;height:auto;background:#fff;border-radius:6px;padding:9px 12px}.brand-row{display:flex;align-items:center;gap:18px}.brand-logo{width:155px;height:auto;background:#fff;border-radius:6px;padding:8px 11px}
 .oa-title{font-size:23px;font-weight:800;line-height:1.35;padding:20px}.oa-sub{font-size:20px;margin-top:8px}
 .purpose{border:1px solid #222;padding:9px 11px;font-size:13px;line-height:1.4;margin-bottom:8px;background:#fff}
+.review-heading{margin:14px 0 0;background:#1d3d5c;color:#fff;border-radius:8px 8px 0 0;padding:12px 16px;font-size:17px;font-weight:800;letter-spacing:.3px}
 .blackbar{background:#000;color:#fff;font-weight:800;padding:7px 10px;margin-top:8px}.section-title{font-size:18px;font-weight:800;margin:16px 0 6px}.qrow{padding:8px 0 2px;font-size:15px}.bar{display:inline-block;border-radius:4px;padding:2px 7px;margin-left:7px;font-size:10px;font-weight:800;color:#fff}.bar1{background:#c62828}.bar2{background:#e67e22}.bar3{background:#62a744}
 .dash{background:#1d3d5c;color:#fff;margin:-1.5rem -3rem 22px;padding:24px 3rem 27px}.dash .eyebrow{font-size:11px;font-weight:800;letter-spacing:1.5px;color:#a9d8ff}.dash h1{font-size:31px;margin:18px 0 12px}.dash p{margin:0;color:#fff}.selection{border-left:4px solid #347ec8;background:#eaf5fc;padding:11px 14px;margin:12px 0 16px;color:#16364b}.section-head{font-size:22px;font-weight:800;color:#102b40;margin:18px 0 12px}
 .kpi{background:#fff;border:1px solid #d8e2e8;border-left:5px solid #a8b7c2;border-radius:12px;padding:15px 15px 14px;min-height:188px;box-shadow:0 3px 12px rgba(20,50,70,.06)}.kpi.green{border-left-color:#2f9e62}.kpi.amber{border-left-color:#c88718}.kpi.red{border-left-color:#cf4c45}.kt{font-size:11px;font-weight:800;color:#55718a}.kv{font-size:29px;font-weight:800;color:#102b40;margin:13px 0 8px}.kd{font-size:11px;color:#657a88;line-height:1.4;margin-top:7px}.ks{font-size:15px;font-weight:600;color:#102b40;margin-top:6px}.badge{display:inline-block;border-radius:999px;padding:3px 10px;font-size:10px;font-weight:800;background:#edf1f4;color:#526775}.badge.green{background:#e3f4e9;color:#16733d}.badge.amber{background:#fff0cf;color:#9b6100}.badge.red{background:#fde7e5;color:#a62d26}.exec{background:#fff;border:1px solid #d8e2e8;border-radius:12px;padding:17px 19px;margin:14px 0}.exec h3{margin:0 0 5px;color:#16364b}.focus{border-left:4px solid #1679c4;background:#f4f9fc;padding:10px 12px;margin-top:10px}
@@ -127,10 +128,12 @@ def review_comments():
     return [dict(zip(keys,r)) for r in rows]
 
 def reviewer_panel(context):
-    with st.expander("Review this page · Add or view comments"):
+    st.markdown('<div class="review-heading">REVIEW COMMENTS</div>',unsafe_allow_html=True)
+    with st.expander("Add or view comments on this page",expanded=True):
         st.caption("Comments are saved permanently and kept separate from audit results.")
         c1,c2=st.columns(2)
-        reviewer=c1.text_input("Reviewer name",value="Rebecca Melody",key=f"reviewer-{context}")
+        reviewer_choice=c1.selectbox("Reviewer name",["Rebecca Melody","Garry Begg","Other"],key=f"reviewer-choice-{context}")
+        reviewer=c1.text_input("Other reviewer name",key=f"reviewer-other-{context}") if reviewer_choice=="Other" else reviewer_choice
         ref=c2.text_input("KPI / question reference",placeholder="e.g. KPI 1 or PTW-4",key=f"review-ref-{context}")
         comment=st.text_area("Review comment",placeholder="Add feedback on the page, KPI or audit question displayed.",key=f"review-text-{context}")
         if st.button("Save review comment",key=f"review-save-{context}",type="primary",use_container_width=True):

@@ -59,7 +59,7 @@ st.markdown("""
 .oa-banner{background:#000;color:#fff;min-height:118px;display:flex;align-items:center;justify-content:center;text-align:center;margin-bottom:8px}
 .oa-title{font-size:23px;font-weight:800;line-height:1.35;padding:20px}.oa-sub{font-size:20px;margin-top:8px}
 .purpose{border:1px solid #222;padding:9px 11px;font-size:13px;line-height:1.4;margin-bottom:8px;background:#fff}
-.blackbar{background:#000;color:#fff;font-weight:800;padding:7px 10px;margin-top:8px}.section-title{font-size:18px;font-weight:800;margin:16px 0 6px}.qrow{padding:8px 0 2px;font-size:15px}
+.blackbar{background:#000;color:#fff;font-weight:800;padding:7px 10px;margin-top:8px}.section-title{font-size:18px;font-weight:800;margin:16px 0 6px}.qrow{padding:8px 0 2px;font-size:15px}.bar{display:inline-block;border-radius:4px;padding:2px 7px;margin-left:7px;font-size:10px;font-weight:800;color:#fff}.bar1{background:#c62828}.bar2{background:#e67e22}.bar3{background:#62a744}
 .dash{background:#1d3d5c;color:#fff;margin:-1.5rem -3rem 22px;padding:24px 3rem 27px}.dash .eyebrow{font-size:11px;font-weight:800;letter-spacing:1.5px;color:#a9d8ff}.dash h1{font-size:31px;margin:18px 0 12px}.dash p{margin:0;color:#fff}.selection{border-left:4px solid #347ec8;background:#eaf5fc;padding:11px 14px;margin:12px 0 16px;color:#16364b}.section-head{font-size:22px;font-weight:800;color:#102b40;margin:18px 0 12px}
 .kpi{background:#fff;border:1px solid #d8e2e8;border-left:5px solid #a8b7c2;border-radius:12px;padding:15px 15px 14px;min-height:188px;box-shadow:0 3px 12px rgba(20,50,70,.06)}.kpi.green{border-left-color:#2f9e62}.kpi.amber{border-left-color:#c88718}.kpi.red{border-left-color:#cf4c45}.kt{font-size:11px;font-weight:800;color:#55718a}.kv{font-size:29px;font-weight:800;color:#102b40;margin:13px 0 8px}.kd{font-size:11px;color:#657a88;line-height:1.4;margin-top:7px}.ks{font-size:15px;font-weight:600;color:#102b40;margin-top:6px}.badge{display:inline-block;border-radius:999px;padding:3px 10px;font-size:10px;font-weight:800;background:#edf1f4;color:#526775}.badge.green{background:#e3f4e9;color:#16733d}.badge.amber{background:#fff0cf;color:#9b6100}.badge.red{background:#fde7e5;color:#a62d26}.exec{background:#fff;border:1px solid #d8e2e8;border-radius:12px;padding:17px 19px;margin:14px 0}.exec h3{margin:0 0 5px;color:#16364b}.focus{border-left:4px solid #1679c4;background:#f4f9fc;padding:10px 12px;margin-top:10px}
 </style>
@@ -112,14 +112,22 @@ def banner(title,sub=""):
 
 def purpose(text): st.markdown(f'<div class="purpose"><b>PURPOSE:</b> {text}</div>',unsafe_allow_html=True)
 
+def bar_review():
+    with st.expander("BAR review criteria"):
+        st.markdown("**BAR 1 — Critical controls:** MAH, loss of containment, isolations, gas testing, authorisation, emergency response and stop-work decisions.")
+        st.markdown("**BAR 2 — Key operational controls:** permit quality, hazard identification, task planning, control implementation, Toolbox Talks, supervision and procedural compliance.")
+        st.markdown("**BAR 3 — Supporting assurance:** planning evidence, records, document administration, workforce perception and continuous improvement.")
+
 def questions(prefix,sections):
     out=[]
     for si,(section,qs) in enumerate(sections):
         st.markdown(f'<div class="section-title">{section}</div>',unsafe_allow_html=True)
-        for qi,(letter,q) in enumerate(qs):
-            st.markdown(f'<div class="qrow"><b>{letter})</b> {q}</div>',unsafe_allow_html=True)
-            c1,c2=st.columns([1,2]); ans=c1.selectbox("Response",["Select","Yes","No","N/A"],key=f"{prefix}-{si}-{qi}",label_visibility="collapsed"); act=c2.text_input("SMART ACTION",placeholder="Add SMART action where required",key=f"act-{prefix}-{si}-{qi}",label_visibility="collapsed")
-            out.append({"section":section,"item":letter,"question":q,"response":None if ans=="Select" else ans,"smart_action":act})
+        for qi,item in enumerate(qs):
+            letter,q,bar=item
+            bar_class=bar.lower().replace(" ","")
+            st.markdown(f'<div class="qrow"><b>{letter}</b> {q}<span class="bar {bar_class}">{bar}</span></div>',unsafe_allow_html=True)
+            c1,c2=st.columns([1,2]); ans=c1.selectbox("Response",["Select","Yes","No","N/A"],key=f"{prefix}-{si}-{qi}",label_visibility="collapsed"); placeholder="If No selected, add SMART action" if ans=="No" else "Add SMART action where required"; act=c2.text_input("SMART ACTION",placeholder=placeholder,key=f"act-{prefix}-{si}-{qi}",label_visibility="collapsed")
+            out.append({"section":section,"item":letter,"bar_rating":bar,"question":q,"response":None if ans=="Select" else ans,"smart_action":act})
     return out
 
 def result(a):
@@ -248,11 +256,11 @@ def dashboard():
               f"**WCC classification:** New WCC {k1new} · Routine WCC {k1routine}  <br>"
               f"**Target:** 16 per week / 64 per 4 weeks  <br>"
               f"**Required response:** {intervention(k1s)}")
-    with cols[0]:dual_card("KPI 1 · Tier 3","Site Controller Permit Assurance",f"{k1p}%" if k1p is not None else "—",f"{k1c}%" if k1c is not None else "—",k1s,k1detail)
-    with cols[1]:card("KPI 2 · Tier 2","Asset Superintendent Permit Non-Compliance",f"{k2c}%" if k2c is not None else "—",k2s,f"Plan {k2done}/{k2plan} · coverage {k2cov}/9")
-    with cols[2]:card("KPI 3 · Tier 2","Leadership Engagement",f"{k3n}/3" if qlead else "—",k3s,f"Q{q} · {k3c if k3c is not None else '—'}% conformance")
-    with cols[3]:card("KPI 4 · Tier 3","Site Leadership Visits",f"{k4c}%" if k4c is not None else "—",k4s,f"OOE {counts['W2W OOE']}/{w} · HSEA {counts['Medic HSEA']}/{w}")
-    with cols[4]:card("KPI 5 · Tier 1","Permit-Controlled Incidents",k5v,k5s,k5detail)
+    with cols[0]:dual_card("KPI 1","Site Controller Permit Assurance",f"{k1p}%" if k1p is not None else "—",f"{k1c}%" if k1c is not None else "—",k1s,k1detail)
+    with cols[1]:card("KPI 2","Asset Superintendent Permit Non-Compliance",f"{k2c}%" if k2c is not None else "—",k2s,f"Plan {k2done}/{k2plan} · coverage {k2cov}/9")
+    with cols[2]:card("KPI 3","Leadership Engagement",f"{k3n}/3" if qlead else "—",k3s,f"Q{q} · {k3c if k3c is not None else '—'}% conformance")
+    with cols[3]:card("KPI 4","Site Leadership Visits",f"{k4c}%" if k4c is not None else "—",k4s,f"OOE {counts['W2W OOE']}/{w} · HSEA {counts['Medic HSEA']}/{w}")
+    with cols[4]:card("KPI 5","Permit-Controlled Incidents",k5v,k5s,k5detail)
     with st.expander("KPI 1 · Site Controller details"):
         st.markdown(k1detail,unsafe_allow_html=True)
     with st.expander("KPI definitions, tolerances and role configuration"):
@@ -269,7 +277,7 @@ def dashboard():
         rows=[]
         for a in permit+tbt+lead:
             for r in a["responses"]:
-                if str(r.get("response","")).lower()=="no":rows.append({"Site":a["site"],"Auditor":a["auditor"],"Form":a["form_name"],"Finding":r.get("question",""),"Action":r.get("smart_action") or r.get("comments_evidence","")})
+                if str(r.get("response","")).lower()=="no":rows.append({"Site":a["site"],"Auditor":a["auditor"],"Form":a["form_name"],"BAR":r.get("bar_rating",""),"Finding":r.get("question",""),"Action":r.get("smart_action") or r.get("comments_evidence","")})
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True) if rows else st.success("No negative assurance responses in this view.")
     with tabs[2]:
         st.markdown("**Work as Imagined** — the question sets represent the expected Control of Work standard and intended controls."); c1,c2,c3=st.columns(3); c1.metric("Question conformance",f"{q_conf(permit+tbt)}%" if q_conf(permit+tbt) is not None else "—"); c2.metric("Permit whole-audit conformance",f"{audit_conf(permit)}%" if audit_conf(permit) is not None else "—"); c3.metric("TBT/POP whole-audit conformance",f"{audit_conf(tbt)}%" if audit_conf(tbt) is not None else "—")
@@ -292,7 +300,7 @@ elif page=="Permit Quality":
     c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today()); nw=c4.checkbox("New WCC")
     c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); auditor=c1.text_input("AUDITOR:"); sc=c2.text_input("SITE CONTROLLER:"); ref=c3.text_input("WCC NUMBER:"); routine=c4.checkbox("Routine"); desc=st.text_input("WCC DESCRIPTION:")
     meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"site_controller":sc,"reference":ref,"wcc_description":desc,"new_wcc":nw,"routine":routine}
-    purpose("Self-verify the quality of a planned or active Work Control Certificate (WCC), including permit preparation, hazard identification, risk assessment, control selection, authorisation and worksite readiness."); st.markdown('<div class="blackbar">QUESTION</div>',unsafe_allow_html=True); rs=questions("ptw",DATA["ptw"]); st.markdown('<div class="blackbar">ENSURE EACH NON-COMPLIANCE GENERATES A RECORDED SMART ACTION</div>',unsafe_allow_html=True)
+    purpose("Self-verify the quality of a planned or active Work Control Certificate (WCC), including permit preparation, hazard identification, risk assessment, control selection, authorisation and worksite readiness."); bar_review(); st.markdown('<div class="blackbar">QUESTION</div>',unsafe_allow_html=True); rs=questions("ptw",DATA["ptw"]); st.markdown('<div class="blackbar">ENSURE EACH NON-COMPLIANCE GENERATES A RECORDED SMART ACTION</div>',unsafe_allow_html=True)
     if st.button("Submit Permit Quality Audit",type="primary",use_container_width=True):
         if not site or not auditor:st.error("Complete SITE / INSTALLATION and AUDITOR.")
         elif nw==routine:st.error("Select exactly one classification: New WCC or Routine.")
@@ -302,7 +310,7 @@ elif page=="Toolbox Talk / Permit / POP":
     banner("SELF VERIFICATION - LEVEL 4 MONITORING","Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures")
     c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today()); activity=c4.radio("TYPE",["New WCC","Routine","POP"],index=None)
     c1,c2,c3=st.columns(3); auditor=c1.text_input("AUDITOR:"); sc=c2.text_input("SITE CONTROLLER:"); ref=c3.text_input("WCC / POP No:"); desc=st.text_input("DESCRIPTION:"); meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"site_controller":sc,"reference":ref,"description":desc,"activity_type":activity}
-    purpose("Self-verify day-to-day Toolbox Talk, permit and operating-procedure compliance, workforce understanding and implementation of Control of Work requirements."); st.markdown('<div class="blackbar">QUESTION · SITE VISIT REQUIRED · SEQUENTIAL REVIEW</div>',unsafe_allow_html=True); rs=questions("tbt12",DATA["tbt"][:2]); st.markdown('<div class="blackbar">AUDITING A POP? MOVE TO QUESTION 8</div>',unsafe_allow_html=True); rs += questions("pop",[DATA["pop"]]) if activity=="POP" else questions("tbt37",DATA["tbt"][2:])+questions("tbt8",[DATA["pop"]])
+    purpose("Self-verify day-to-day Toolbox Talk, permit and operating-procedure compliance, workforce understanding and implementation of Control of Work requirements."); bar_review(); st.markdown('<div class="blackbar">QUESTION · SITE VISIT REQUIRED · SEQUENTIAL REVIEW</div>',unsafe_allow_html=True); rs=questions("tbt12",DATA["tbt"][:2]); st.markdown('<div class="blackbar">AUDITING A POP? MOVE TO QUESTION 8</div>',unsafe_allow_html=True); rs += questions("pop",[DATA["pop"]]) if activity=="POP" else questions("tbt37",DATA["tbt"][2:])+questions("tbt8",[DATA["pop"]])
     if st.button("Submit TBT / Permit / POP Audit",type="primary",use_container_width=True):
         if not site or not auditor or not activity:st.error("Complete SITE / INSTALLATION, AUDITOR and TYPE.")
         elif any(r["response"] is None for r in rs):st.error("Every displayed question requires a response.")
@@ -331,7 +339,7 @@ elif page=="Submitted Audits":
 else:
     st.header("Dashboard Export"); flat=[]
     for a in audits():
-        for r in a["responses"]:flat.append({"Audit ID":a["audit_id"],"Submitted At":a["submitted_at"],"Form":a["form_name"],"Audit Date":a["audit_date"],"Site / Installation":a["site"],"Auditor":a["auditor"],"Reference":a["reference"],"Section":r.get("section",""),"Question":r.get("question",""),"Response":r.get("response",""),"Comments / Evidence":r.get("comments_evidence",""),"SMART Action":r.get("smart_action",""),"Overall Indicator":a["summary"]})
+        for r in a["responses"]:flat.append({"Audit ID":a["audit_id"],"Submitted At":a["submitted_at"],"Form":a["form_name"],"Audit Date":a["audit_date"],"Site / Installation":a["site"],"Auditor":a["auditor"],"Reference":a["reference"],"Section":r.get("section",""),"Question Ref":r.get("item",""),"BAR Rating":r.get("bar_rating",""),"Question":r.get("question",""),"Response":r.get("response",""),"Comments / Evidence":r.get("comments_evidence",""),"SMART Action":r.get("smart_action",""),"Overall Indicator":a["summary"]})
     if flat:
         df=pd.DataFrame(flat); st.dataframe(df.head(100),use_container_width=True,hide_index=True); st.download_button("Download dashboard-ready CSV",df.to_csv(index=False).encode("utf-8-sig"),"Operational_Assurance_Export.csv","text/csv",use_container_width=True)
     else:st.info("Submit a test audit first.")

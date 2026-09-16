@@ -78,7 +78,7 @@ st.markdown("""
 .review-heading{margin:14px 0 0;background:#1d3d5c;color:#fff;border-radius:8px 8px 0 0;padding:12px 16px;font-size:17px;font-weight:800;letter-spacing:.3px}
 .blackbar{background:#000;color:#fff;font-weight:800;padding:7px 10px;margin-top:8px}.section-title{font-size:18px;font-weight:800;margin:16px 0 6px}.qrow{padding:8px 0 2px;font-size:15px}.bar{display:inline-block;border-radius:4px;padding:2px 7px;margin-left:7px;font-size:10px;font-weight:800;color:#fff}.bar1{background:#c62828}.bar2{background:#e67e22}.bar3{background:#62a744}
 .dash{background:#1d3d5c;color:#fff;margin:-1.5rem -3rem 22px;padding:24px 3rem 27px}.dash .eyebrow{font-size:11px;font-weight:800;letter-spacing:1.5px;color:#a9d8ff}.dash h1{font-size:31px;margin:18px 0 12px}.dash p{margin:0;color:#fff}.selection{border-left:4px solid #347ec8;background:#eaf5fc;padding:11px 14px;margin:12px 0 16px;color:#16364b}.section-head{font-size:22px;font-weight:800;color:#102b40;margin:18px 0 12px}
-.kpi{background:#fff;border:1px solid #d8e2e8;border-left:5px solid #a8b7c2;border-radius:12px;padding:15px 15px 14px;min-height:188px;box-shadow:0 3px 12px rgba(20,50,70,.06)}.kpi.green{border-left-color:#2f9e62}.kpi.amber{border-left-color:#c88718}.kpi.red{border-left-color:#cf4c45}.kt{font-size:11px;font-weight:800;color:#55718a}.kv{font-size:29px;font-weight:800;color:#102b40;margin:13px 0 8px}.kd{font-size:11px;color:#657a88;line-height:1.4;margin-top:7px}.ks{font-size:15px;font-weight:600;color:#102b40;margin-top:6px}.badge{display:inline-block;border-radius:999px;padding:3px 10px;font-size:10px;font-weight:800;background:#edf1f4;color:#526775}.badge.green{background:#e3f4e9;color:#16733d}.badge.amber{background:#fff0cf;color:#9b6100}.badge.red{background:#fde7e5;color:#a62d26}.exec{background:#fff;border:1px solid #d8e2e8;border-radius:12px;padding:17px 19px;margin:14px 0}.exec h3{margin:0 0 5px;color:#16364b}.focus{border-left:4px solid #1679c4;background:#f4f9fc;padding:10px 12px;margin-top:10px}
+.kpi{background:#fff;border:1px solid #d8e2e8;border-left:5px solid #a8b7c2;border-radius:12px;padding:13px 11px 12px;min-height:188px;box-shadow:0 3px 12px rgba(20,50,70,.06);overflow-wrap:anywhere}.kpi.green{border-left-color:#2f9e62}.kpi.amber{border-left-color:#c88718}.kpi.red{border-left-color:#cf4c45}.kt{font-size:10px;font-weight:800;color:#55718a}.kv{font-size:25px;font-weight:800;color:#102b40;margin:11px 0 7px}.kd{font-size:10px;color:#657a88;line-height:1.35;margin-top:7px}.ks{font-size:13px;font-weight:600;color:#102b40;line-height:1.25;margin-top:6px;min-height:49px}.badge{display:inline-block;border-radius:999px;padding:3px 8px;font-size:9px;font-weight:800;background:#edf1f4;color:#526775}.badge.green{background:#e3f4e9;color:#16733d}.badge.amber{background:#fff0cf;color:#9b6100}.badge.red{background:#fde7e5;color:#a62d26}.exec{background:#fff;border:1px solid #d8e2e8;border-radius:12px;padding:17px 19px;margin:14px 0}.exec h3{margin:0 0 5px;color:#16364b}.focus{border-left:4px solid #1679c4;background:#f4f9fc;padding:10px 12px;margin-top:10px}
 </style>
 """, unsafe_allow_html=True)
 
@@ -192,6 +192,30 @@ def q_conf(rows):
         v += [str(x.get("response","")).lower() for x in a["responses"] if str(x.get("response","")).lower() in ("yes","no")]
     return None if not v else round(100*sum(x=="yes" for x in v)/len(v))
 
+def noncompliance_narrative(rows):
+    findings=[]
+    themes={"Permit and authorisation":("permit","authoris","wcc","certificate"),"Hazard and risk assessment":("hazard","risk","tra","assessment"),"Control implementation":("control","isolation","gas test","barrier"),"Toolbox Talk and understanding":("toolbox","tbt","understand","personnel"),"Procedures and documents":("procedure","pop","document","current approved"),"Supervision and monitoring":("supervis","monitor","site controller","inspection")}
+    counts={k:0 for k in themes}; bars={}
+    for a in rows:
+        for r in a["responses"]:
+            if str(r.get("response","")).lower()!="no":continue
+            q=str(r.get("question","")).strip(); findings.append(q); bar=r.get("bar_rating") or "Unrated"; bars[bar]=bars.get(bar,0)+1; low=q.lower()
+            matched=False
+            for theme,words in themes.items():
+                if any(w in low for w in words):counts[theme]+=1; matched=True; break
+            if not matched:counts.setdefault("Other assurance controls",0); counts["Other assurance controls"]+=1
+    if not findings:return "No non-compliant questions were recorded in the selected view. Work as done is therefore not showing a variance from the expected control standard."
+    ranked=[(k,v) for k,v in sorted(counts.items(),key=lambda x:x[1],reverse=True) if v]
+    lead=", ".join(f"{k} ({v})" for k,v in ranked[:3]); bar_text=", ".join(f"{k}: {v}" for k,v in sorted(bars.items()))
+    repeated=pd.Series(findings).value_counts(); repeats=[f"{q} ({n})" for q,n in repeated.items() if n>1]
+    text=f"The selected audits contain **{len(findings)} non-compliant question response{'s' if len(findings)!=1 else ''}**. The main variance themes are **{lead}**. Criticality profile: **{bar_text}**."
+    if repeats:text+=f" Repeated questions include **{'; '.join(repeats[:3])}**, indicating a potential recurring gap between the expected process and field implementation."
+    else:text+=" No individual question is repeated yet; the findings currently indicate isolated control gaps rather than a confirmed recurring pattern."
+    if bars.get("BAR 1",0):text+=f" **Leadership focus:** {bars['BAR 1']} BAR 1 finding{'s' if bars['BAR 1']!=1 else ''} require immediate confirmation that critical controls remain effective, with accountable actions and timely close-out."
+    elif bars.get("BAR 2",0):text+=" **Leadership focus:** verify that the identified operational-control weaknesses are corrected, check whether they occur at other sites and monitor closure through the next assurance cycle."
+    else:text+=" **Leadership focus:** address the supporting-control gaps through normal action management and monitor for recurrence before escalation is considered."
+    return text
+
 def permit_type(a):
     m=a["metadata"]
     if m.get("routine") and not m.get("new_wcc"):return "Routine"
@@ -303,13 +327,26 @@ def dashboard():
               f"**WCC classification:** New WCC {k1new} · Routine WCC {k1routine}  <br>"
               f"**Target:** 16 per week / 64 per 4 weeks  <br>"
               f"**Required response:** {intervention(k1s)}")
-    with cols[0]:dual_card("KPI 1","Site Controller Permit Assurance",f"{k1p}%" if k1p is not None else "—",f"{k1c}%" if k1c is not None else "—",k1s,k1detail)
-    with cols[1]:card("KPI 2","Asset Superintendent Permit Non-Compliance",f"{k2c}%" if k2c is not None else "—",k2s,f"Plan {k2done}/{k2plan} · coverage {k2cov}/9")
-    with cols[2]:card("KPI 3","Leadership Engagement",f"{k3n}/3" if qlead else "—",k3s,f"Q{q} · {k3c if k3c is not None else '—'}% conformance")
-    with cols[3]:card("KPI 4","Site Leadership Visits",f"{k4c}%" if k4c is not None else "—",k4s,f"OOE {counts['W2W OOE']}/{w} · HSEA {counts['Medic HSEA']}/{w}")
-    with cols[4]:card("KPI 5","Permit-Controlled Incidents",k5v,k5s,k5detail)
-    with st.expander("KPI 1 · Site Controller details"):
-        st.markdown(k1detail,unsafe_allow_html=True)
+    with cols[0]:
+        dual_card("KPI 1","Site Controller Permit Assurance",f"{k1p}%" if k1p is not None else "—",f"{k1c}%" if k1c is not None else "—",k1s,k1detail)
+        with st.expander("RAG tolerances"):
+            st.markdown(k1detail,unsafe_allow_html=True); st.markdown("**Green:** ≥100% complete and ≥90% question compliance.  \n**Amber:** 70–99% complete and/or 70–89% compliance.  \n**Red:** either measure below 70%.")
+    with cols[1]:
+        card("KPI 2","Asset Superintendent Permit Non-Compliance",f"{k2c}%" if k2c is not None else "—",k2s,f"Plan {k2done}/{k2plan} · coverage {k2cov}/9")
+        with st.expander("RAG tolerances"):
+            st.markdown("**Basis:** weekly Asset Superintendent sample, whole-audit conformance and coverage across nine groups.  \n**Green:** ≥100% complete and ≥90% conformance.  \n**Amber:** 70–99% complete and/or 70–89% conformance.  \n**Red:** either measure below 70%.")
+    with cols[2]:
+        card("KPI 3","Leadership Engagement",f"{k3n}/3" if qlead else "—",k3s,f"Q{q} · {k3c if k3c is not None else '—'}% conformance")
+        with st.expander("RAG tolerances"):
+            st.markdown("**Basis:** three leadership engagements per quarter, conformance and reasonable operational coverage.  \n**Green:** ≥3 engagements, ≥90% conformance and reasonable coverage.  \n**Amber:** delivery or coverage is partly achieved while the quarter remains recoverable.  \n**Red:** <70% conformance, or material under-delivery at quarter end.")
+    with cols[3]:
+        card("KPI 4","Site Leadership Visits",f"{k4c}%" if k4c is not None else "—",k4s,f"OOE {counts['W2W OOE']}/{w} · HSEA {counts['Medic HSEA']}/{w}")
+        with st.expander("RAG tolerances"):
+            st.markdown("**Basis:** weekly OOE and HSEA/Medic visits, audit conformance and finding significance.  \n**Green:** 100% visit delivery and ≥90% conformance.  \n**Amber:** 50–99% delivery and/or 70–89% conformance.  \n**Red:** either key visit rate below 50%, conformance below 70%, or significant/repeat findings.")
+    with cols[4]:
+        card("KPI 5","Permit-Controlled Incidents",k5v,k5s,k5detail)
+        with st.expander("RAG tolerances"):
+            st.markdown("**Green:** no adverse incident trigger or increasing trend.  \n**Amber:** incident count increased; one HiPO, MTC+, LOC or repeat theme.  \n**Red:** significant increase, ≥2 HiPOs, ≥2 MTC+ injuries, ≥1 major LOC, or recurring permit-control failure.")
     with st.expander("KPI definitions, tolerances and role configuration"):
         st.markdown("The overall position follows the most adverse assessed KPI. KPI 1 combines completion against plan with compliance across applicable audit questions.")
         st.markdown(f"**Leadership focus:** {intervention(overall)}")
@@ -328,6 +365,8 @@ def dashboard():
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True) if rows else st.success("No negative assurance responses in this view.")
     with tabs[2]:
         st.markdown("**Work as Imagined** — the question sets represent the expected Control of Work standard and intended controls."); c1,c2,c3=st.columns(3); c1.metric("Question conformance",f"{q_conf(permit+tbt)}%" if q_conf(permit+tbt) is not None else "—"); c2.metric("Permit whole-audit conformance",f"{audit_conf(permit)}%" if audit_conf(permit) is not None else "—"); c3.metric("TBT/POP whole-audit conformance",f"{audit_conf(tbt)}%" if audit_conf(tbt) is not None else "—")
+        st.markdown("#### Leadership interpretation · Work as Done")
+        st.info(noncompliance_narrative(permit+tbt))
     with tabs[3]:
         rr=[]
         for n in sorted({a["auditor"] for a in permit+tbt+lead if a["auditor"]}):

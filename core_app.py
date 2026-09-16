@@ -66,7 +66,7 @@ class DatabaseConnection:
         self.connection.close()
 
 
-st.set_page_config(page_title="Operational Assurance - Control of Work", page_icon="🔒", layout="wide")
+st.set_page_config(page_title="Perenco UK - Control of Work Assurance", page_icon="🔒", layout="wide")
 st.markdown("""
 <style>
 .block-container{max-width:1450px;padding-top:1.5rem;padding-bottom:3rem}
@@ -82,11 +82,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 SITE_GROUPS = {
-    "Asset A": (1,1), "Asset B": (1,1), "Asset C": (1,1),
-    "North NUI Group": (2,1), "Gas Terminal": (1,1),
-    "Offshore Hub": (1,1), "South NUI Group": (2,1)
+    "Dimlington": (1,1),
+    "Cleeton": (1,1),
+    "Ravenspurn North": (1,1),
+    "Northern NUIs": (2,1),
+    "Bacton": (1,1),
+    "Leman 27BC": (1,1),
+    "Southern NUIs": (2,1),
 }
-ASSET_GROUPS = ["Asset A","Asset B","Asset C","North Flying Team","North W2W","Offshore Hub","South Flying Team","South W2W","Gas Terminal"]
+ASSET_GROUPS = list(SITE_GROUPS)
 
 
 def db():
@@ -193,19 +197,19 @@ def seed_demo():
     def add(aid,form,site,aud,meta,resp,summary=""):
         m={"site":site,"audit_date":d,"auditor":aud,"reference":aid,"demo":True,**meta}; c.execute("INSERT INTO audits VALUES(?,?,?,?,?,?,?,?,?,?)",(aid,now,form,d,site,aud,aid,json.dumps(m),json.dumps(resp),summary))
     yes=[{"question":"Control verified","response":"Yes","smart_action":""}]; no=[{"question":"Control not fully evidenced","response":"No","smart_action":"Review and close identified assurance gap."}]
-    add("DEMO-PQ1","Control of Work: Permit Quality","Asset A","Demo Site Controller",{"routine":True,"new_wcc":False},yes)
-    add("DEMO-PQ2","Control of Work: Permit Quality","Asset A","Demo Site Controller",{"routine":False,"new_wcc":True},no)
-    add("DEMO-PQ3","Control of Work: Permit Quality","Asset C","Demo Asset Superintendent",{"routine":True,"new_wcc":False},yes)
-    add("DEMO-TBT1","Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures","North W2W","Demo W2W OOE",{"activity_type":"Routine"},no)
-    add("DEMO-TBT2","Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures","South W2W","Demo Medic HSEA",{"activity_type":"Routine"},yes)
-    add("DEMO-TBT3","Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures","Offshore Hub","Demo Field Hub OIM",{"activity_type":"Routine"},yes)
-    add("DEMO-LEAD1","Control of Work Leadership Engagement Checklist","North W2W","Demo Operations Director",{},yes,"Meets CoW Standard")
-    add("DEMO-LEAD2","Control of Work Leadership Engagement Checklist","South W2W","Demo Operations Director",{},yes,"Meets CoW Standard")
+    add("DEMO-PQ1","Control of Work: Permit Quality","Dimlington","Demo Site Controller",{"routine":True,"new_wcc":False},yes)
+    add("DEMO-PQ2","Control of Work: Permit Quality","Dimlington","Demo Site Controller",{"routine":False,"new_wcc":True},no)
+    add("DEMO-PQ3","Control of Work: Permit Quality","Ravenspurn North","Demo Asset Superintendent",{"routine":True,"new_wcc":False},yes)
+    add("DEMO-TBT1","Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures","Northern NUIs","Demo W2W OOE",{"activity_type":"Routine"},no)
+    add("DEMO-TBT2","Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures","Southern NUIs","Demo Medic HSEA",{"activity_type":"Routine"},yes)
+    add("DEMO-TBT3","Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures","Leman 27BC","Demo Field Hub OIM",{"activity_type":"Routine"},yes)
+    add("DEMO-LEAD1","Control of Work Leadership Engagement Checklist","Northern NUIs","Demo Operations Director",{},yes,"Meets CoW Standard")
+    add("DEMO-LEAD2","Control of Work Leadership Engagement Checklist","Southern NUIs","Demo Operations Director",{},yes,"Meets CoW Standard")
     for x in [("permit","Demo Site Controller","Site Controller"),("permit","Demo Asset Superintendent","Asset Superintendent"),("tbt","Demo W2W OOE","W2W OOE"),("tbt","Demo Medic HSEA","Medic HSEA"),("tbt","Demo Field Hub OIM","Field Hub OIM"),("lead","Demo Operations Director","Operations Director")]:c.execute("INSERT OR REPLACE INTO roles VALUES(?,?,?)",x)
     c.execute("INSERT OR REPLACE INTO kpi5 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",("DEMO-KPI5",now,d[:7],"All",1,0,0,0,1,0,"Yes","No","No","Synthetic trial value",1)); c.commit(); c.close()
 
 def dashboard():
-    st.markdown('<div class="dash"><div class="eyebrow">OPERATIONAL ASSURANCE</div><h1>Control of Work KPI Dashboard</h1><p>Monthly performance, cumulative visibility and leadership oversight</p></div>',unsafe_allow_html=True)
+    st.markdown('<div class="dash"><div class="eyebrow">PERENCO UK | OPERATIONAL ASSURANCE</div><h1>Control of Work KPI Dashboard</h1><p>Monthly performance, cumulative visibility and leadership oversight</p></div>',unsafe_allow_html=True)
     all_a=audits()
     with st.container(border=True):
         c1,c2,c3=st.columns(3); md=c1.date_input("PERIOD VIEW",date.today().replace(day=1)); c2.selectbox("REPORTING BASIS",["Monthly KPI review"])
@@ -233,7 +237,7 @@ def dashboard():
     gov=governance(period,site); w=weeks(y,m)
     sc=[a for a in permit if pmap.get(a["auditor"])=="Site Controller"]; asc=[a for a in permit if pmap.get(a["auditor"])=="Asset Superintendent"]
     k1plan=(sum(a+b for a,b in SITE_GROUPS.values())*w) if site=="All" else ((sum(SITE_GROUPS.get(site,(0,0)))*w) or None); k1done=len([a for a in sc if permit_type(a)!="Unclassified"]); k1p=round(100*k1done/k1plan) if k1plan else None; k1c=q_conf(sc); k1s=rag(k1p,k1c)
-    k2plan=w; k2done=len([a for a in asc if permit_type(a)!="Unclassified"]); k2p=round(100*k2done/k2plan) if k2plan else None; k2c=audit_conf(asc); k2s=rag(k2p,k2c) if asc else "Not enough data"; k2cov=len({a["site"] for a in asc if a["site"] in ASSET_GROUPS})
+    k2plan=w; k2done=len([a for a in asc if permit_type(a)!="Unclassified"]); k2p=round(100*k2done/k2plan) if k2plan else None; k2c=audit_conf(asc); k2s=rag(k2p,k2c) if asc else "Not enough data"; k2cov=len({a["site"] for a in asc if a["site"]})
     q=(m-1)//3+1; qstart=date(y,(q-1)*3+1,1); qe=(q-1)*3+3; qend=date(y,qe,calendar.monthrange(y,qe)[1]); qlead=[a for a in all_a if "Leadership Engagement" in a["form_name"] and safe_date(a["audit_date"]) and qstart<=safe_date(a["audit_date"])<=qend and (site=="All" or a["site"]==site) and lmap.get(a["auditor"]) in {"Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager"}]; k3n=len(qlead); k3c=audit_conf(qlead); complete=date.today()>qend
     if not qlead:k3s="Not enough data"
     elif k3c is not None and k3c<70:k3s="Red"

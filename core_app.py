@@ -76,8 +76,8 @@ st.markdown("""
 .oa-title{font-size:23px;font-weight:800;line-height:1.35;padding:20px}.oa-sub{font-size:20px;margin-top:8px}
 .purpose{border:1px solid #222;padding:9px 11px;font-size:13px;line-height:1.4;margin-bottom:8px;background:#fff}
 .blackbar{background:#000;color:#fff;font-weight:800;padding:7px 10px;margin-top:8px}.section-title{font-size:18px;font-weight:800;margin:16px 0 6px}.qrow{padding:8px 0 2px;font-size:15px}
-.dash{background:linear-gradient(135deg,#102b40,#173f5c 70%,#1d5d82);color:#fff;border-radius:15px;padding:23px 26px;margin-bottom:16px}.dash h1{font-size:31px;margin:0 0 4px}.dash p{margin:0;color:#d6e5ef}
-.kpi{background:#fff;border:1px solid #d8e2e8;border-top:5px solid #a8b7c2;border-radius:12px;padding:14px;min-height:170px;box-shadow:0 3px 12px rgba(20,50,70,.06)}.kpi.green{border-top-color:#2f9e62}.kpi.amber{border-top-color:#d4a72c}.kpi.red{border-top-color:#cf4c45}.kt{font-size:10px;font-weight:800;color:#718594;text-transform:uppercase}.kv{font-size:28px;font-weight:800;color:#102b40;margin:10px 0 4px}.km{font-size:20px;font-weight:800;color:#102b40;margin:8px 0 2px}.kl{font-size:10px;font-weight:700;color:#657a88}.kd{font-size:11px;color:#657a88;line-height:1.4}.ks{font-size:11px;font-weight:800;color:#314b5c}.exec{background:#fff;border:1px solid #d8e2e8;border-radius:12px;padding:17px 19px;margin-top:12px}.exec h3{margin:0 0 8px;color:#16364b}.focus{border-left:4px solid #1679c4;background:#f4f9fc;padding:10px 12px;margin-top:10px}
+.dash{background:#1d3d5c;color:#fff;margin:-1.5rem -3rem 22px;padding:24px 3rem 27px}.dash .eyebrow{font-size:11px;font-weight:800;letter-spacing:1.5px;color:#a9d8ff}.dash h1{font-size:31px;margin:18px 0 12px}.dash p{margin:0;color:#fff}.selection{border-left:4px solid #347ec8;background:#eaf5fc;padding:11px 14px;margin:12px 0 16px;color:#16364b}.section-head{font-size:22px;font-weight:800;color:#102b40;margin:18px 0 12px}
+.kpi{background:#fff;border:1px solid #d8e2e8;border-left:5px solid #a8b7c2;border-radius:12px;padding:15px 15px 14px;min-height:188px;box-shadow:0 3px 12px rgba(20,50,70,.06)}.kpi.green{border-left-color:#2f9e62}.kpi.amber{border-left-color:#c88718}.kpi.red{border-left-color:#cf4c45}.kt{font-size:11px;font-weight:800;color:#55718a}.kv{font-size:29px;font-weight:800;color:#102b40;margin:13px 0 8px}.kd{font-size:11px;color:#657a88;line-height:1.4;margin-top:7px}.ks{font-size:15px;font-weight:600;color:#102b40;margin-top:6px}.badge{display:inline-block;border-radius:999px;padding:3px 10px;font-size:10px;font-weight:800;background:#edf1f4;color:#526775}.badge.green{background:#e3f4e9;color:#16733d}.badge.amber{background:#fff0cf;color:#9b6100}.badge.red{background:#fde7e5;color:#a62d26}.exec{background:#fff;border:1px solid #d8e2e8;border-radius:12px;padding:17px 19px;margin:14px 0}.exec h3{margin:0 0 5px;color:#16364b}.focus{border-left:4px solid #1679c4;background:#f4f9fc;padding:10px 12px;margin-top:10px}
 </style>
 """, unsafe_allow_html=True)
 
@@ -164,12 +164,12 @@ def rag(plan,conf):
 def css(s): return {"Green":"green","Amber":"amber","Red":"red","Needs review":"amber"}.get(s,"")
 
 def card(name,title,value,status,detail):
-    st.markdown(f'<div class="kpi {css(status)}"><div class="kt">{name}</div><div class="ks">{title}</div><div class="kv">{value}</div><div class="kd">{detail}<br><b>{status}</b></div></div>',unsafe_allow_html=True)
+    badge=status.upper() if status!="Not enough data" else "NOT ASSESSED"
+    st.markdown(f'<div class="kpi {css(status)}"><div class="kt">{name}</div><div class="ks">{title}</div><div class="kv">{value}</div><span class="badge {css(status)}">{badge}</span><div class="kd">{detail}</div></div>',unsafe_allow_html=True)
 
 def dual_card(name,title,completion,compliance,status,detail):
-    st.markdown(f'<div class="kpi {css(status)}"><div class="kt">{name}</div><div class="ks">{title}</div><div class="km">{completion}</div><div class="kl">AUDIT COMPLETION</div><div class="km">{compliance}</div><div class="kl">AUDIT-QUESTION COMPLIANCE</div><div class="kd"><b>{status}</b></div></div>',unsafe_allow_html=True)
-    with st.expander(f"{name} details"):
-        st.markdown(detail,unsafe_allow_html=True)
+    badge=status.upper() if status!="Not enough data" else "NOT ASSESSED"
+    st.markdown(f'<div class="kpi {css(status)}"><div class="kt">{name}</div><div class="ks">{title}</div><div class="kv">{completion}</div><span class="badge {css(status)}">{badge}</span><div class="kd">Audit completion<br>Question compliance {compliance}</div></div>',unsafe_allow_html=True)
 
 def intervention(status):
     return {
@@ -205,11 +205,14 @@ def seed_demo():
     c.execute("INSERT OR REPLACE INTO kpi5 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",("DEMO-KPI5",now,d[:7],"All",1,0,0,0,1,0,"Yes","No","No","Synthetic trial value",1)); c.commit(); c.close()
 
 def dashboard():
-    st.markdown('<div class="dash"><h1>Control of Work KPI Dashboard</h1><p>Operational assurance · performance, coverage and leadership oversight</p></div>',unsafe_allow_html=True)
-    c1,c2,c3=st.columns([1,1,2]); md=c1.date_input("Reporting month",date.today().replace(day=1)); demo=c2.toggle("Demo mode")
-    if c3.button("Load / refresh demonstration data",disabled=not demo,use_container_width=True):seed_demo(); st.rerun()
-    y,m=md.year,md.month; period=md.strftime("%Y-%m"); all_a=audits(); month=[a for a in all_a if safe_date(a["audit_date"]) and safe_date(a["audit_date"]).year==y and safe_date(a["audit_date"]).month==m]
-    sites=sorted({a["site"] for a in month if a["site"]}); site=st.selectbox("Site / Team",["All"]+sites)
+    st.markdown('<div class="dash"><div class="eyebrow">OPERATIONAL ASSURANCE</div><h1>Control of Work KPI Dashboard</h1><p>Monthly performance, cumulative visibility and leadership oversight</p></div>',unsafe_allow_html=True)
+    all_a=audits()
+    with st.container(border=True):
+        c1,c2,c3=st.columns(3); md=c1.date_input("PERIOD VIEW",date.today().replace(day=1)); c2.selectbox("REPORTING BASIS",["Monthly KPI review"])
+        y,m=md.year,md.month; period=md.strftime("%Y-%m"); month=[a for a in all_a if safe_date(a["audit_date"]) and safe_date(a["audit_date"]).year==y and safe_date(a["audit_date"]).month==m]
+        sites=sorted({a["site"] for a in month if a["site"]}); site=c3.selectbox("ASSET / REGION",["All assets and teams"]+sites)
+    site="All" if site=="All assets and teams" else site
+    st.markdown(f'<div class="selection">Showing: {md.strftime("%B %Y")} only &nbsp;|&nbsp; Monthly KPI review &nbsp;|&nbsp; {"All assets and teams" if site=="All" else site}</div>',unsafe_allow_html=True)
     view=month if site=="All" else [a for a in month if a["site"]==site]
     permit=[a for a in view if a["form_name"]=="Control of Work: Permit Quality"]; tbt=[a for a in view if "Toolbox Talk" in a["form_name"]]; lead=[a for a in view if "Leadership Engagement" in a["form_name"]]
     pmap,tmap,lmap=role_map("permit"),role_map("tbt"),role_map("lead")
@@ -249,6 +252,8 @@ def dashboard():
         current,prev,hipo,inj,loc,major,repeat,recurring,sig=k5[4],k5[5],k5[6],k5[7],k5[8],k5[9],k5[10],k5[11],k5[12]
         k5s="Red" if sig=="Yes" or hipo>=2 or inj>=2 or major>=1 or recurring=="Yes" else ("Amber" if current>prev or hipo==1 or inj==1 or loc>=1 or repeat=="Yes" else "Green"); k5v=str(current); k5detail=f"Previous {prev} · HiPO {hipo} · MTC+ {inj} · LOC {loc}"
     statuses=[k1s,k2s,k3s,k4s,k5s]; assessed=[x for x in statuses if x in ("Green","Amber","Red")]; overall="Red" if "Red" in assessed else ("Amber" if "Amber" in assessed else ("Green" if len(assessed)==5 else "Not enough data"))
+    st.markdown(f'<div class="exec"><h3>Overall Control of Work position: {overall.upper()}</h3><div>Results reflect the selected reporting month and asset or team view.</div></div>',unsafe_allow_html=True)
+    st.markdown('<div class="section-head">Five KPI results</div>',unsafe_allow_html=True)
     cols=st.columns(5)
     k1new=sum(permit_type(a)=="New WCC" for a in sc); k1routine=sum(permit_type(a)=="Routine" for a in sc)
     k1detail=(f"**Completed:** {k1done}/{k1plan or '—'}  <br>"
@@ -260,10 +265,14 @@ def dashboard():
     with cols[2]:card("KPI 3 · Tier 2","Leadership Engagement",f"{k3n}/3" if qlead else "—",k3s,f"Q{q} · {k3c if k3c is not None else '—'}% conformance")
     with cols[3]:card("KPI 4 · Tier 3","Site Leadership Visits",f"{k4c}%" if k4c is not None else "—",k4s,f"OOE {counts['W2W OOE']}/{w} · HSEA {counts['Medic HSEA']}/{w}")
     with cols[4]:card("KPI 5 · Tier 1","Permit-Controlled Incidents",k5v,k5s,k5detail)
-    st.markdown(f'<div class="exec"><h3>Overall assurance position: {overall}</h3><div>Five-tier view combining assurance delivery, whole-permit conformance, leadership engagement and lagging incident performance.</div><div class="focus"><b>Leadership focus:</b> address Red/Amber exceptions, maintain planned assurance coverage and test repeat findings for systemic Control of Work weakness.</div></div>',unsafe_allow_html=True)
+    with st.expander("KPI 1 · Site Controller details"):
+        st.markdown(k1detail,unsafe_allow_html=True)
+    with st.expander("KPI definitions, tolerances and role configuration"):
+        st.markdown("The overall position follows the most adverse assessed KPI. KPI 1 combines completion against plan with compliance across applicable audit questions.")
+        st.markdown(f"**Leadership focus:** {intervention(overall)}")
     tabs=st.tabs(["Company & Site Performance","Findings & Actions","Work as Imagined vs Work as Done","Auditor View","KPI 5 Data"])
     with tabs[0]:
-        st.subheader("Site Controller assurance by group"); rows=[]
+        st.subheader("Monthly performance by asset / group"); rows=[]
         month_permit=[a for a in month if a["form_name"]=="Control of Work: Permit Quality" and pmap.get(a["auditor"])=="Site Controller"]
         for g,(rw,nw) in SITE_GROUPS.items():
             aa=[a for a in month_permit if a["site"]==g]; done=len([a for a in aa if permit_type(a)!="Unclassified"]); plan=(rw+nw)*w; pc=round(100*done/plan) if plan else None; cf=q_conf(aa); rows.append({"Site / Group":g,"Routine WCC":sum(permit_type(a)=="Routine" for a in aa),"New WCC":sum(permit_type(a)=="New WCC" for a in aa),"Planned":plan,"Completed":done,"Completion %":pc,"Audit-question compliance %":cf,"RAG":rag(pc,cf)})

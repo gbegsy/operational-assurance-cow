@@ -61,7 +61,7 @@ st.markdown("""
 .purpose{border:1px solid #222;padding:9px 11px;font-size:13px;line-height:1.4;margin-bottom:8px;background:#fff}
 .blackbar{background:#000;color:#fff;font-weight:800;padding:7px 10px;margin-top:8px}.section-title{font-size:18px;font-weight:800;margin:16px 0 6px}.qrow{padding:8px 0 2px;font-size:15px}
 .dash{background:linear-gradient(135deg,#102b40,#173f5c 70%,#1d5d82);color:#fff;border-radius:15px;padding:23px 26px;margin-bottom:16px}.dash h1{font-size:31px;margin:0 0 4px}.dash p{margin:0;color:#d6e5ef}
-.kpi{background:#fff;border:1px solid #d8e2e8;border-top:5px solid #a8b7c2;border-radius:12px;padding:14px;min-height:170px;box-shadow:0 3px 12px rgba(20,50,70,.06)}.kpi.green{border-top-color:#2f9e62}.kpi.amber{border-top-color:#d4a72c}.kpi.red{border-top-color:#cf4c45}.kt{font-size:10px;font-weight:800;color:#718594;text-transform:uppercase}.kv{font-size:28px;font-weight:800;color:#102b40;margin:10px 0 4px}.kd{font-size:11px;color:#657a88;line-height:1.4}.ks{font-size:11px;font-weight:800;color:#314b5c}.exec{background:#fff;border:1px solid #d8e2e8;border-radius:12px;padding:17px 19px;margin-top:12px}.exec h3{margin:0 0 8px;color:#16364b}.focus{border-left:4px solid #1679c4;background:#f4f9fc;padding:10px 12px;margin-top:10px}
+.kpi{background:#fff;border:1px solid #d8e2e8;border-top:5px solid #a8b7c2;border-radius:12px;padding:14px;min-height:170px;box-shadow:0 3px 12px rgba(20,50,70,.06)}.kpi.green{border-top-color:#2f9e62}.kpi.amber{border-top-color:#d4a72c}.kpi.red{border-top-color:#cf4c45}.kt{font-size:10px;font-weight:800;color:#718594;text-transform:uppercase}.kv{font-size:28px;font-weight:800;color:#102b40;margin:10px 0 4px}.km{font-size:20px;font-weight:800;color:#102b40;margin:8px 0 2px}.kl{font-size:10px;font-weight:700;color:#657a88}.kd{font-size:11px;color:#657a88;line-height:1.4}.ks{font-size:11px;font-weight:800;color:#314b5c}.exec{background:#fff;border:1px solid #d8e2e8;border-radius:12px;padding:17px 19px;margin-top:12px}.exec h3{margin:0 0 8px;color:#16364b}.focus{border-left:4px solid #1679c4;background:#f4f9fc;padding:10px 12px;margin-top:10px}
 </style>
 """, unsafe_allow_html=True)
 
@@ -136,19 +136,29 @@ def q_conf(rows):
 def permit_type(a):
     m=a["metadata"]
     if m.get("routine") and not m.get("new_wcc"):return "Routine"
-    if m.get("new_wcc") and not m.get("routine"):return "Non-Routine"
+    if m.get("new_wcc") and not m.get("routine"):return "New WCC"
     return "Unclassified"
 
 def weeks(y,m): return sum(1 for w in calendar.monthcalendar(y,m) if w[calendar.MONDAY])
 def rag(plan,conf):
+    if (plan is not None and plan<70) or (conf is not None and conf<70):return "Red"
     if plan is None or conf is None:return "Not enough data"
-    if plan<70 or conf<70:return "Red"
     if plan>=100 and conf>=90:return "Green"
     return "Amber"
 def css(s): return {"Green":"green","Amber":"amber","Red":"red","Needs review":"amber"}.get(s,"")
 
 def card(name,title,value,status,detail):
     st.markdown(f'<div class="kpi {css(status)}"><div class="kt">{name}</div><div class="ks">{title}</div><div class="kv">{value}</div><div class="kd">{detail}<br><b>{status}</b></div></div>',unsafe_allow_html=True)
+
+def dual_card(name,title,completion,compliance,status,detail):
+    st.markdown(f'<div class="kpi {css(status)}"><div class="kt">{name}</div><div class="ks">{title}</div><div class="km">{completion}</div><div class="kl">AUDIT COMPLETION</div><div class="km">{compliance}</div><div class="kl">AUDIT-QUESTION COMPLIANCE</div><div class="kd">{detail}<br><b>{status}</b></div></div>',unsafe_allow_html=True)
+
+def intervention(status):
+    return {
+        "Green": "No intervention required.",
+        "Amber": "Site Leadership intervention required to identify improvements and address emerging trends.",
+        "Red": "Immediate management intervention required; improvement actions to be implemented within one month.",
+    }.get(status, "")
 
 def safe_date(x):
     try:return datetime.strptime(str(x),"%Y-%m-%d").date()
@@ -178,8 +188,7 @@ def seed_demo():
 
 def dashboard():
     st.markdown('<div class="dash"><h1>Control of Work KPI Dashboard</h1><p>Operational assurance · performance, coverage and leadership oversight</p></div>',unsafe_allow_html=True)
-    c1,c2,c3=st.columns([1,1,2]); md=c1.date_input("Reporting month",date.today().replace(day=1)); demo=c2.toggle("Demo mode")
-    if c3.button("Load / refresh demonstration data",disabled=not demo,use_container_width=True):seed_demo(); st.rerun()
+    md=st.date_input("Reporting month",date.today().replace(day=1))
     y,m=md.year,md.month; period=md.strftime("%Y-%m"); all_a=audits(); month=[a for a in all_a if safe_date(a["audit_date"]) and safe_date(a["audit_date"]).year==y and safe_date(a["audit_date"]).month==m]
     sites=sorted({a["site"] for a in month if a["site"]}); site=st.selectbox("Site / Team",["All"]+sites)
     view=month if site=="All" else [a for a in month if a["site"]==site]
@@ -193,7 +202,7 @@ def dashboard():
                 if val!=cur:set_role(kind,n,val)
     gov=governance(period,site); w=weeks(y,m)
     sc=[a for a in permit if pmap.get(a["auditor"])=="Site Controller"]; asc=[a for a in permit if pmap.get(a["auditor"])=="Asset Superintendent"]
-    k1plan=(sum(a+b for a,b in SITE_GROUPS.values())*w) if site=="All" else ((sum(SITE_GROUPS.get(site,(0,0)))*w) or None); k1done=len([a for a in sc if permit_type(a)!="Unclassified"]); k1p=round(100*k1done/k1plan) if k1plan else None; k1c=audit_conf(sc); k1s=rag(k1p,k1c) if sc else "Not enough data"
+    k1plan=(sum(a+b for a,b in SITE_GROUPS.values())*w) if site=="All" else ((sum(SITE_GROUPS.get(site,(0,0)))*w) or None); k1done=len([a for a in sc if permit_type(a)!="Unclassified"]); k1p=round(100*k1done/k1plan) if k1plan else None; k1c=q_conf(sc); k1s=rag(k1p,k1c)
     k2plan=w; k2done=len([a for a in asc if permit_type(a)!="Unclassified"]); k2p=round(100*k2done/k2plan) if k2plan else None; k2c=audit_conf(asc); k2s=rag(k2p,k2c) if asc else "Not enough data"; k2cov=len({a["site"] for a in asc if a["site"] in ASSET_GROUPS})
     q=(m-1)//3+1; qstart=date(y,(q-1)*3+1,1); qe=(q-1)*3+3; qend=date(y,qe,calendar.monthrange(y,qe)[1]); qlead=[a for a in all_a if "Leadership Engagement" in a["form_name"] and safe_date(a["audit_date"]) and qstart<=safe_date(a["audit_date"])<=qend and (site=="All" or a["site"]==site) and lmap.get(a["auditor"]) in {"Operations Director","Deputy Operations Director","Asset Superintendent","Ops Support Manager"}]; k3n=len(qlead); k3c=audit_conf(qlead); complete=date.today()>qend
     if not qlead:k3s="Not enough data"
@@ -214,7 +223,11 @@ def dashboard():
         k5s="Red" if sig=="Yes" or hipo>=2 or inj>=2 or major>=1 or recurring=="Yes" else ("Amber" if current>prev or hipo==1 or inj==1 or loc>=1 or repeat=="Yes" else "Green"); k5v=str(current); k5detail=f"Previous {prev} · HiPO {hipo} · MTC+ {inj} · LOC {loc}"
     statuses=[k1s,k2s,k3s,k4s,k5s]; assessed=[x for x in statuses if x in ("Green","Amber","Red")]; overall="Red" if "Red" in assessed else ("Amber" if "Amber" in assessed else ("Green" if len(assessed)==5 else "Not enough data"))
     cols=st.columns(5)
-    with cols[0]:card("KPI 1 · Tier 3","Site Controller Permit Non-Compliance",f"{k1c}%" if k1c is not None else "—",k1s,f"Plan {k1done}/{k1plan or '—'}")
+    k1new=sum(permit_type(a)=="New WCC" for a in sc); k1routine=sum(permit_type(a)=="Routine" for a in sc)
+    k1detail=(f"Completed {k1done}/{k1plan or '—'} · New WCC {k1new} · Routine WCC {k1routine}"
+              f" · target 16 per week / 64 per 4 weeks"
+              f"<br>{intervention(k1s)}")
+    with cols[0]:dual_card("KPI 1 · Tier 3","Site Controller Permit Assurance",f"{k1p}%" if k1p is not None else "—",f"{k1c}%" if k1c is not None else "—",k1s,k1detail)
     with cols[1]:card("KPI 2 · Tier 2","Asset Superintendent Permit Non-Compliance",f"{k2c}%" if k2c is not None else "—",k2s,f"Plan {k2done}/{k2plan} · coverage {k2cov}/9")
     with cols[2]:card("KPI 3 · Tier 2","Leadership Engagement",f"{k3n}/3" if qlead else "—",k3s,f"Q{q} · {k3c if k3c is not None else '—'}% conformance")
     with cols[3]:card("KPI 4 · Tier 3","Site Leadership Visits",f"{k4c}%" if k4c is not None else "—",k4s,f"OOE {counts['W2W OOE']}/{w} · HSEA {counts['Medic HSEA']}/{w}")
@@ -225,8 +238,8 @@ def dashboard():
         st.subheader("Site Controller assurance by group"); rows=[]
         month_permit=[a for a in month if a["form_name"]=="Control of Work: Permit Quality" and pmap.get(a["auditor"])=="Site Controller"]
         for g,(rw,nw) in SITE_GROUPS.items():
-            aa=[a for a in month_permit if a["site"]==g]; done=len([a for a in aa if permit_type(a)!="Unclassified"]); plan=(rw+nw)*w; pc=round(100*done/plan) if plan else None; cf=audit_conf(aa); rows.append({"Site / Group":g,"Routine":sum(permit_type(a)=="Routine" for a in aa),"Non-routine":sum(permit_type(a)=="Non-Routine" for a in aa),"Planned":plan,"Completed":done,"Plan %":pc,"Whole-permit conformance %":cf,"RAG":rag(pc,cf) if done else "Not enough data"})
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True); st.caption(f"Monthly demonstration basis: {w} reporting weeks. Routine and non-routine samples remain separate.")
+            aa=[a for a in month_permit if a["site"]==g]; done=len([a for a in aa if permit_type(a)!="Unclassified"]); plan=(rw+nw)*w; pc=round(100*done/plan) if plan else None; cf=q_conf(aa); rows.append({"Site / Group":g,"Routine WCC":sum(permit_type(a)=="Routine" for a in aa),"New WCC":sum(permit_type(a)=="New WCC" for a in aa),"Planned":plan,"Completed":done,"Completion %":pc,"Audit-question compliance %":cf,"RAG":rag(pc,cf)})
+        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True); st.caption(f"Monthly demonstration basis: {w} reporting weeks. New WCC and Routine WCC samples remain separate.")
     with tabs[1]:
         rows=[]
         for a in permit+tbt+lead:
@@ -251,28 +264,20 @@ page=st.sidebar.radio("Navigation",["Dashboard","Permit Quality","Toolbox Talk /
 if page=="Dashboard": dashboard()
 elif page=="Permit Quality":
     banner("SELF VERIFICATION - LEVEL 4 MONITORING","Control of Work: Permit Quality")
-    c1,c2,c3=st.columns([1.5,1.2,1.2]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today())
-    c1,c2,c3=st.columns([1.5,1.2,1.2]); auditor=c1.text_input("AUDITOR:"); sc=c2.text_input("SITE CONTROLLER:"); ref=c3.text_input("WCC NUMBER:"); desc=st.text_input("WCC DESCRIPTION:")
-    meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"site_controller":sc,"reference":ref,"wcc_description":desc,"new_wcc":False,"routine":True}
+    c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today()); nw=c4.checkbox("New WCC")
+    c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); auditor=c1.text_input("AUDITOR:"); sc=c2.text_input("SITE CONTROLLER:"); ref=c3.text_input("WCC NUMBER:"); routine=c4.checkbox("Routine"); desc=st.text_input("WCC DESCRIPTION:")
+    meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"site_controller":sc,"reference":ref,"wcc_description":desc,"new_wcc":nw,"routine":routine}
     purpose("Self-verify the quality of a planned or active Work Control Certificate (WCC), including permit preparation, hazard identification, risk assessment, control selection, authorisation and worksite readiness."); st.markdown('<div class="blackbar">QUESTION</div>',unsafe_allow_html=True); rs=questions("ptw",DATA["ptw"]); st.markdown('<div class="blackbar">ENSURE EACH NON-COMPLIANCE GENERATES A RECORDED SMART ACTION</div>',unsafe_allow_html=True)
     if st.button("Submit Permit Quality Audit",type="primary",use_container_width=True):
         if not site or not auditor:st.error("Complete SITE / INSTALLATION and AUDITOR.")
+        elif nw==routine:st.error("Select exactly one classification: New WCC or Routine.")
         elif any(r["response"] is None for r in rs):st.error("Every question requires a response.")
         else:st.success("Submitted: "+save_audit("Control of Work: Permit Quality",meta,rs))
 elif page=="Toolbox Talk / Permit / POP":
     banner("SELF VERIFICATION - LEVEL 4 MONITORING","Control of Work: Toolbox Talk, Permit Compliance & Operating Procedures")
     c1,c2,c3,c4=st.columns([1.5,1.2,1.2,1]); site=c1.text_input("SITE / INSTALLATION:"); team=c2.text_input("TEAM:"); ad=c3.date_input("DATE OF AUDIT:",date.today()); activity=c4.radio("TYPE",["New WCC","Routine","POP"],index=None)
     c1,c2,c3=st.columns(3); auditor=c1.text_input("AUDITOR:"); sc=c2.text_input("SITE CONTROLLER:"); ref=c3.text_input("WCC / POP No:"); desc=st.text_input("DESCRIPTION:"); meta={"site":site,"team":team,"audit_date":str(ad),"auditor":auditor,"site_controller":sc,"reference":ref,"description":desc,"activity_type":activity}
-    purpose("Self-verify day-to-day Toolbox Talk, permit and operating-procedure compliance, workforce understanding and implementation of Control of Work requirements.")
-    if activity=="POP":
-        st.markdown('<div class="blackbar">QUESTION 8 · PROCESS OPERATING PROCEDURE REVIEW</div>',unsafe_allow_html=True)
-        rs=questions("pop",[DATA["pop"]])
-    elif activity in ("New WCC","Routine"):
-        st.markdown('<div class="blackbar">QUESTIONS 1–7 · SITE VISIT REQUIRED · SEQUENTIAL REVIEW</div>',unsafe_allow_html=True)
-        rs=questions("tbt",DATA["tbt"])
-    else:
-        st.info("Select the assessment TYPE to display the relevant questions.")
-        rs=[]
+    purpose("Self-verify day-to-day Toolbox Talk, permit and operating-procedure compliance, workforce understanding and implementation of Control of Work requirements."); st.markdown('<div class="blackbar">QUESTION · SITE VISIT REQUIRED · SEQUENTIAL REVIEW</div>',unsafe_allow_html=True); rs=questions("tbt12",DATA["tbt"][:2]); st.markdown('<div class="blackbar">AUDITING A POP? MOVE TO QUESTION 8</div>',unsafe_allow_html=True); rs += questions("pop",[DATA["pop"]]) if activity=="POP" else questions("tbt37",DATA["tbt"][2:])+questions("tbt8",[DATA["pop"]])
     if st.button("Submit TBT / Permit / POP Audit",type="primary",use_container_width=True):
         if not site or not auditor or not activity:st.error("Complete SITE / INSTALLATION, AUDITOR and TYPE.")
         elif any(r["response"] is None for r in rs):st.error("Every displayed question requires a response.")

@@ -151,7 +151,9 @@ def card(name,title,value,status,detail):
     st.markdown(f'<div class="kpi {css(status)}"><div class="kt">{name}</div><div class="ks">{title}</div><div class="kv">{value}</div><div class="kd">{detail}<br><b>{status}</b></div></div>',unsafe_allow_html=True)
 
 def dual_card(name,title,completion,compliance,status,detail):
-    st.markdown(f'<div class="kpi {css(status)}"><div class="kt">{name}</div><div class="ks">{title}</div><div class="km">{completion}</div><div class="kl">AUDIT COMPLETION</div><div class="km">{compliance}</div><div class="kl">AUDIT-QUESTION COMPLIANCE</div><div class="kd">{detail}<br><b>{status}</b></div></div>',unsafe_allow_html=True)
+    st.markdown(f'<div class="kpi {css(status)}"><div class="kt">{name}</div><div class="ks">{title}</div><div class="km">{completion}</div><div class="kl">AUDIT COMPLETION</div><div class="km">{compliance}</div><div class="kl">AUDIT-QUESTION COMPLIANCE</div><div class="kd"><b>{status}</b></div></div>',unsafe_allow_html=True)
+    with st.expander(f"{name} details"):
+        st.markdown(detail,unsafe_allow_html=True)
 
 def intervention(status):
     return {
@@ -224,9 +226,10 @@ def dashboard():
     statuses=[k1s,k2s,k3s,k4s,k5s]; assessed=[x for x in statuses if x in ("Green","Amber","Red")]; overall="Red" if "Red" in assessed else ("Amber" if "Amber" in assessed else ("Green" if len(assessed)==5 else "Not enough data"))
     cols=st.columns(5)
     k1new=sum(permit_type(a)=="New WCC" for a in sc); k1routine=sum(permit_type(a)=="Routine" for a in sc)
-    k1detail=(f"Completed {k1done}/{k1plan or '—'} · New WCC {k1new} · Routine WCC {k1routine}"
-              f" · target 16 per week / 64 per 4 weeks"
-              f"<br>{intervention(k1s)}")
+    k1detail=(f"**Completed:** {k1done}/{k1plan or '—'}  <br>"
+              f"**WCC classification:** New WCC {k1new} · Routine WCC {k1routine}  <br>"
+              f"**Target:** 16 per week / 64 per 4 weeks  <br>"
+              f"**Required response:** {intervention(k1s)}")
     with cols[0]:dual_card("KPI 1 · Tier 3","Site Controller Permit Assurance",f"{k1p}%" if k1p is not None else "—",f"{k1c}%" if k1c is not None else "—",k1s,k1detail)
     with cols[1]:card("KPI 2 · Tier 2","Asset Superintendent Permit Non-Compliance",f"{k2c}%" if k2c is not None else "—",k2s,f"Plan {k2done}/{k2plan} · coverage {k2cov}/9")
     with cols[2]:card("KPI 3 · Tier 2","Leadership Engagement",f"{k3n}/3" if qlead else "—",k3s,f"Q{q} · {k3c if k3c is not None else '—'}% conformance")

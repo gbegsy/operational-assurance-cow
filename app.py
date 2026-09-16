@@ -18,15 +18,14 @@ if DB.exists():
     except Exception:
         pass
 
-# Generic, client-neutral locations used by the KPI engine.
+# Perenco UK KPI 1 Site Controller groups from the July 2026 specification.
 SITE_OPTIONS = [
-    "Asset A", "Asset B", "Asset C", "North NUI Group", "Gas Terminal",
-    "Offshore Hub", "South NUI Group", "North Flying Team", "North W2W",
-    "South Flying Team", "South W2W"
+    "Dimlington", "Cleeton", "Ravenspurn North", "Northern NUIs",
+    "Bacton", "Leman 27BC", "Southern NUIs"
 ]
 TEAM_OPTIONS = [
-    "Site Operations", "North Flying Team", "North W2W",
-    "South Flying Team", "South W2W", "Offshore Hub Team"
+    "Dimlington", "Cleeton", "Ravenspurn North", "Northern NUIs",
+    "Bacton", "Leman 27BC", "Southern NUIs"
 ]
 
 # Existing manually-created UAT records may pre-date role selection. Give each audit

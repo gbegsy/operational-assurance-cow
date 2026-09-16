@@ -56,7 +56,7 @@ st.markdown("""
 .block-container{max-width:1450px;padding-top:1.5rem;padding-bottom:3rem}
 [data-testid="stSidebar"]{background:linear-gradient(180deg,#f7f9fb,#edf2f6);border-right:1px solid #d8e1e7}
 [data-testid="stSidebar"] div[role="radiogroup"] label{background:#fff;border:1px solid #d7e1e8;border-radius:9px;padding:8px 10px;margin:2px 0}
-.oa-banner{background:#000;color:#fff;min-height:118px;display:flex;align-items:center;justify-content:center;text-align:center;margin-bottom:8px}
+.oa-banner{background:#000;color:#fff;min-height:118px;display:flex;align-items:center;justify-content:center;gap:26px;text-align:center;margin-bottom:8px}.oa-logo{width:145px;height:auto;background:#fff;border-radius:6px;padding:9px 12px}.brand-row{display:flex;align-items:center;gap:18px}.brand-logo{width:155px;height:auto;background:#fff;border-radius:6px;padding:8px 11px}
 .oa-title{font-size:23px;font-weight:800;line-height:1.35;padding:20px}.oa-sub{font-size:20px;margin-top:8px}
 .purpose{border:1px solid #222;padding:9px 11px;font-size:13px;line-height:1.4;margin-bottom:8px;background:#fff}
 .blackbar{background:#000;color:#fff;font-weight:800;padding:7px 10px;margin-top:8px}.section-title{font-size:18px;font-weight:800;margin:16px 0 6px}.qrow{padding:8px 0 2px;font-size:15px}.bar{display:inline-block;border-radius:4px;padding:2px 7px;margin-left:7px;font-size:10px;font-weight:800;color:#fff}.bar1{background:#c62828}.bar2{background:#e67e22}.bar3{background:#62a744}
@@ -106,9 +106,11 @@ def role_map(kind):
 def set_role(kind,name,role):
     c=db(); c.execute("INSERT OR REPLACE INTO roles VALUES(?,?,?)",(kind,name,role)); c.commit(); c.close()
 
+PERENCO_LOGO = "https://www.perenco.com/wp-content/themes/perenco_v5/asset/svg/logo-perenco-2024.svg"
+
 def banner(title,sub=""):
     s=f'<div class="oa-sub">{sub}</div>' if sub else ""
-    st.markdown(f'<div class="oa-banner"><div class="oa-title">{title}{s}</div></div>',unsafe_allow_html=True)
+    st.markdown(f'<div class="oa-banner"><img class="oa-logo" src="{PERENCO_LOGO}" alt="Perenco"><div class="oa-title">{title}{s}</div></div>',unsafe_allow_html=True)
 
 def purpose(text): st.markdown(f'<div class="purpose"><b>PURPOSE:</b> {text}</div>',unsafe_allow_html=True)
 
@@ -201,7 +203,7 @@ def seed_demo():
     c.execute("INSERT OR REPLACE INTO kpi5 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",("DEMO-KPI5",now,d[:7],"All",1,0,0,0,1,0,"Yes","No","No","Synthetic trial value",1)); c.commit(); c.close()
 
 def dashboard():
-    st.markdown('<div class="dash"><div class="eyebrow">PERENCO UK | OPERATIONAL ASSURANCE</div><h1>Control of Work KPI Dashboard</h1><p>Monthly performance, cumulative visibility and leadership oversight</p></div>',unsafe_allow_html=True)
+    st.markdown(f'<div class="dash"><div class="brand-row"><img class="brand-logo" src="{PERENCO_LOGO}" alt="Perenco"><div class="eyebrow">PERENCO UK | OPERATIONAL ASSURANCE</div></div><h1>Control of Work KPI Dashboard</h1><p>Monthly performance, cumulative visibility and leadership oversight</p></div>',unsafe_allow_html=True)
     all_a=audits()
     with st.container(border=True):
         c1,c2,c3=st.columns(3); md=c1.date_input("PERIOD VIEW",date.today().replace(day=1)); c2.selectbox("REPORTING BASIS",["Monthly KPI review"])

@@ -5,13 +5,12 @@ from streamlit.delta_generator import DeltaGenerator
 BASE = Path(__file__).parent
 
 SITE_OPTIONS = [
-    "Asset A", "Asset B", "Asset C", "North NUI Group", "Gas Terminal",
-    "Offshore Hub", "South NUI Group", "North Flying Team", "North W2W",
-    "South Flying Team", "South W2W"
+    "Dimlington", "Cleeton", "Ravenspurn North", "Northern NUIs",
+    "Bacton", "Leman 27BC", "Southern NUIs"
 ]
 TEAM_OPTIONS = [
-    "Site Operations", "North Flying Team", "North W2W",
-    "South Flying Team", "South W2W", "Offshore Hub Team"
+    "Dimlington", "Cleeton", "Ravenspurn North", "Northern NUIs",
+    "Bacton", "Leman 27BC", "Southern NUIs"
 ]
 
 _original_st_text_input = st.text_input

@@ -111,14 +111,20 @@ def review_comments():
     return [dict(zip(keys,r)) for r in rows]
 
 def reviewer_panel(context):
-    with st.sidebar.expander("Add review comment"):
-        st.caption("Saved separately from audits and KPI results.")
-        reviewer=st.text_input("Reviewer name",key=f"reviewer-{context}")
-        ref=st.text_input("KPI / question reference",placeholder="e.g. KPI 1 or PTW-4",key=f"review-ref-{context}")
-        comment=st.text_area("Comment",key=f"review-text-{context}")
-        if st.button("Save comment",key=f"review-save-{context}",use_container_width=True):
+    with st.expander("Review this page · Add or view comments"):
+        st.caption("Comments are saved permanently and kept separate from audit results.")
+        c1,c2=st.columns(2)
+        reviewer=c1.text_input("Reviewer name",value="Rebecca Melody",key=f"reviewer-{context}")
+        ref=c2.text_input("KPI / question reference",placeholder="e.g. KPI 1 or PTW-4",key=f"review-ref-{context}")
+        comment=st.text_area("Review comment",placeholder="Add feedback on the page, KPI or audit question displayed.",key=f"review-text-{context}")
+        if st.button("Save review comment",key=f"review-save-{context}",type="primary",use_container_width=True):
             if not reviewer.strip() or not comment.strip():st.error("Enter reviewer name and comment.")
-            else:st.success("Saved: "+save_review_comment(reviewer.strip(),context,ref.strip() or "General",comment.strip()))
+            else:st.success("Comment saved: "+save_review_comment(reviewer.strip(),context,ref.strip() or "General",comment.strip()))
+        existing=[x for x in review_comments() if x["page_context"]==context]
+        if existing:
+            st.markdown("**Comments on this page**")
+            shown=pd.DataFrame(existing).rename(columns={"submitted_at":"Submitted","reviewer_name":"Reviewer","question_ref":"KPI / Question","comment_text":"Comment","status":"Status"})
+            st.dataframe(shown[["Submitted","Reviewer","KPI / Question","Comment","Status"]],use_container_width=True,hide_index=True)
 
 def role_map(kind):
     c=db(); r=dict(c.execute("SELECT person_name,role_name FROM roles WHERE mapping_type=?",(kind,)).fetchall()); c.close(); return r

@@ -83,6 +83,7 @@ def db():
     c.execute("CREATE TABLE IF NOT EXISTS roles(mapping_type TEXT,person_name TEXT,role_name TEXT,PRIMARY KEY(mapping_type,person_name))")
     c.execute("CREATE TABLE IF NOT EXISTS kpi5(record_id TEXT PRIMARY KEY,submitted_at TEXT,reporting_month TEXT,site TEXT,current_count INTEGER,previous_count INTEGER,hipo INTEGER,injury INTEGER,loc INTEGER,major_loc INTEGER,repeat_theme TEXT,recurring_failure TEXT,significant_increase TEXT,comments TEXT,demo INTEGER DEFAULT 0)")
     c.execute("CREATE TABLE IF NOT EXISTS governance(period TEXT,site TEXT,kpi2_alignment TEXT,kpi2_ind_conf INTEGER,kpi2_ind_find INTEGER,kpi2_self_find INTEGER,kpi3_coverage TEXT,kpi4_justification TEXT,kpi4_oim_coverage TEXT,kpi4_findings TEXT,kpi4_oim_consecutive INTEGER,kpi4_oim_12m INTEGER,PRIMARY KEY(period,site))")
+    c.execute("CREATE TABLE IF NOT EXISTS review_comments(comment_id TEXT PRIMARY KEY,submitted_at TEXT,reviewer_name TEXT,page_context TEXT,question_ref TEXT,comment_text TEXT,status TEXT)")
     c.commit(); return c
 
 def save_audit(form,meta,responses,summary=""):
@@ -99,6 +100,25 @@ def audits():
         try:a["responses"]=json.loads(a["responses"] or "[]")
         except:a["responses"]=[]
     return out
+
+def save_review_comment(reviewer,page_context,question_ref,comment_text):
+    cid="REV-"+uuid.uuid4().hex[:8].upper(); c=db()
+    c.execute("INSERT INTO review_comments VALUES(?,?,?,?,?,?,?)",(cid,datetime.now().isoformat(timespec="seconds"),reviewer,page_context,question_ref,comment_text,"Open")); c.commit(); c.close(); return cid
+
+def review_comments():
+    c=db(); rows=c.execute("SELECT * FROM review_comments ORDER BY submitted_at DESC").fetchall(); c.close()
+    keys=["comment_id","submitted_at","reviewer_name","page_context","question_ref","comment_text","status"]
+    return [dict(zip(keys,r)) for r in rows]
+
+def reviewer_panel(context):
+    with st.sidebar.expander("Add review comment"):
+        st.caption("Saved separately from audits and KPI results.")
+        reviewer=st.text_input("Reviewer name",key=f"reviewer-{context}")
+        ref=st.text_input("KPI / question reference",placeholder="e.g. KPI 1 or PTW-4",key=f"review-ref-{context}")
+        comment=st.text_area("Comment",key=f"review-text-{context}")
+        if st.button("Save comment",key=f"review-save-{context}",use_container_width=True):
+            if not reviewer.strip() or not comment.strip():st.error("Enter reviewer name and comment.")
+            else:st.success("Saved: "+save_review_comment(reviewer.strip(),context,ref.strip() or "General",comment.strip()))
 
 def role_map(kind):
     c=db(); r=dict(c.execute("SELECT person_name,role_name FROM roles WHERE mapping_type=?",(kind,)).fetchall()); c.close(); return r
@@ -294,7 +314,8 @@ def dashboard():
             rid="KPI5-"+uuid.uuid4().hex[:8].upper(); con=db(); con.execute("INSERT INTO kpi5 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(rid,datetime.now().isoformat(timespec="seconds"),period,site,current,prev,hipo,injury,loc,major,repeat,recurring,sig,comments,0)); con.commit(); con.close(); st.success("KPI 5 result saved.")
 
 st.sidebar.markdown("### Operational Assurance")
-page=st.sidebar.radio("Navigation",["Dashboard","Permit Quality","Toolbox Talk / Permit / POP","Leadership Engagement","Submitted Audits","Dashboard Export"],label_visibility="collapsed")
+page=st.sidebar.radio("Navigation",["Dashboard","Permit Quality","Toolbox Talk / Permit / POP","Leadership Engagement","Submitted Audits","Review Comments","Dashboard Export"],label_visibility="collapsed")
+reviewer_panel(page)
 
 if page=="Dashboard": dashboard()
 elif page=="Permit Quality":
@@ -338,6 +359,13 @@ elif page=="Leadership Engagement":
             meta={"site":site,"audit_date":str(ad),"auditor":leader,"site_controller":sc,"reference":"","positive_observations":positive,"opportunities_for_improvement":improvement,"actions_agreed":actions,"auditor_notes":notes,"overall_indicator":indicator}; st.success("Submitted: "+save_audit("Control of Work Leadership Engagement Checklist",meta,rs,indicator))
 elif page=="Submitted Audits":
     st.header("Submitted Audits"); aa=audits(); df=pd.DataFrame([{k:a[k] for k in ["audit_id","submitted_at","form_name","audit_date","site","auditor","reference","summary"]} for a in aa]); st.dataframe(df,use_container_width=True,hide_index=True) if len(df) else st.info("No submissions yet.")
+elif page=="Review Comments":
+    st.header("Review Comments"); st.caption("Reviewer feedback is retained separately and does not affect audit submissions or KPI calculations.")
+    comments=review_comments(); df=pd.DataFrame(comments)
+    if len(df):
+        st.dataframe(df.rename(columns={"comment_id":"Comment ID","submitted_at":"Submitted","reviewer_name":"Reviewer","page_context":"Page","question_ref":"KPI / Question","comment_text":"Comment","status":"Status"}),use_container_width=True,hide_index=True)
+        st.download_button("Download review comments",df.to_csv(index=False).encode("utf-8-sig"),"Review_Comments.csv","text/csv",use_container_width=True)
+    else:st.info("No review comments have been added yet.")
 else:
     st.header("Dashboard Export"); flat=[]
     for a in audits():
